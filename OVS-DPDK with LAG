@@ -1,0 +1,99 @@
+ 
+#采用hash模式固件配置，设置lag模式为hash
+mlxconfig -d /dev/mst/mt41682_pciconf0 s LAG_RESOURCE_ALLOCATION=1
+#冷启动
+
+#执行以下命令，可以把以下命令写到脚本执行
+
+Set “hash” bond script:
+#!/bin/sh -x
+
+#确保关闭switchdev模式
+devlink dev eswitch set pci/0000:03:00.0 mode legacy
+sleep 1
+
+devlink dev eswitch set pci/0000:03:00.1 mode legacy
+sleep 1
+
+#打开hash模式
+echo "hash" > /sys/class/net/p0/compat/devlink/lag_port_select_mode
+sleep 1
+
+echo "hash" > /sys/class/net/p1/compat/devlink/lag_port_select_mode
+sleep 1
+
+#打开switchdev模式
+devlink dev eswitch set pci/0000:03:00.0 mode switchdev
+sleep 1
+
+devlink dev eswitch set pci/0000:03:00.1 mode switchdev
+sleep 1
+
+ 
+#添加bond0接口
+ip link add bond0 type bond
+sleep 1
+
+ip link set bond0 down
+sleep 1
+
+#设置bond 4
+ip link set bond0 type bond miimon 100 mode 4
+sleep 1
+
+ip link set p0 down
+sleep 1
+
+ip link set p1 down
+sleep 1
+
+#将端口加到bond0
+ip link set p0 master bond0
+ip link set p1 master bond0
+sleep 1
+
+#把bond口up
+ip link set p0 up
+ip link set p1 up
+ip link set bond0 up
+
+
+把端口添加到ovs-dpdk
+
+#如果没有enable大页，手动创建大页内存
+echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+#设置ovs配置，65535为卡上pf的代表口，其他0,1,2,3为VF代表口，酌情添加
+ovs-vsctl --no-wait set Open_vSwitch . other_config:dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535]"
+
+#配置dpdk和内存
+ovs-vsctl set Open_vSwitch . other_config:dpdk-socket-mem=1024
+ovs-vsctl set open_vswitch . other_config:dpdk-init=true
+
+#重启ovs
+systemctl restart openvswitch
+
+#添加网桥
+ovs-vsctl add-br dpdkbr0 -- set bridge dpdkbr0 datapath_type=netdev
+
+#添加bond端口
+ovs-vsctl add-port dpdkbr0 bond0 -- set Interface bond0 type=dpdk options:dpdk-devargs="0000:03:00.0"
+
+# 添加pf和sf
+ovs-vsctl add-port dpdkbr0 pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk-devargs="0000:03:00.0,representor=[65535]"
+ovs-vsctl add-port dpdkbr0 en3f0pf0sf88 -- set Interface en3f0pf0sf88 type=dpdk options:dpdk-devargs="0000:03:00.0,representor=sf88"
+
+
+#后台同事建议用如下方式创建SF88端口，:
+
+/opt/mellanox/iproute2/sbin/mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88
+sleep 1
+/opt/mellanox/iproute2/sbin/mlxdevm port function set pci/0000:03:00.0/229408 state active
+sleep 1
+echo mlx5_core.sf.2 > /sys/bus/auxiliary/devices/mlx5_core.sf.2/driver/unbind
+sleep 1
+echo mlx5_core.sf.2 > /sys/bus/auxiliary/drivers/mlx5_core.sf/bind
+
+#个人建议可以用
+virtnet hotplug -i mlx5_bond_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 1024
+
