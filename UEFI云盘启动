@@ -1,0 +1,61 @@
+
+
+
+#1. 验证固件配置
+#配置静态virtio_blk设备，确认配置了至少一个virtio blk设备（e.g VIRTIO_BLK_EMULATION_NUM_PF=1）
+#新版virtio_blk静可能已经改变，待修改）
+mlxconfig -d 03:00.0 set VIRTIO_BLK_EMULATION_ENABLE=1 VIRTIO_BLK_EMULATION_NUM_MSIX=17 PCI_SWITCH_EMULATION_ENABLE=1 PCI_SWITCH_EMULATION_NUM_PORT=16 VIRTIO_BLK_EMULATION_NUM_PF=1 
+
+#2. 方法一：手动创建挂载设备 
+
+#用spdk根据本地image（iso文件）创建名为VirtioImg1的bdev
+spdk_rpc.py bdev_aio_create /root/rhel-server-7.5-x86_64-boot.iso VirtioImg1 512
+#利用VirtioImg1创建snap设备
+snap_rpc.py controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev VirtioImg1 --pf_id 0
+
+#2. 将virtio设备创建并挂载的命令加入到设备初始化的配置好文件中
+#注：本用例是挂载在arm里的image的场景，假定本地的image为/root/rhel-server-7.5-x86_64-boot.iso
+#在/etc/mlnx_snap目录下
+#1) 在spdk_rpc_init.conf 文件中写入如下命令 "bdev_aio_create /root/rhel-server-7.5-x86_64-boot.iso VirtioImg1 512" 
+#2) 在snap_rpc_init.conf 文件中写入如下命令 "controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev VirtioImg1 --pf_id 0" 
+
+#3. 重启snap服务验证一下是否成功创建设备
+systemctl restart mlnx_snap
+systemctl status mlnx_snap  #确认log中显示已经成功生成和挂载设备
+      Jan 26 22:52:30 localhost.localdomain spdk[2406]: mlnx_snap_emu_main.c:  51:spdk_emu_app_start: *NOTICE*: MLNX_SNAP s...fully
+      Jan 26 22:52:33 localhost.localdomain bash[2606]: VirtioImg1
+      Jan 26 22:52:34 localhost.localdomain mlnx_snap_emu[2406]: [2021-01-26 22:52:34.024108] INFO::virtio_blk_controller.c:...x5_0
+      Jan 26 22:52:34 localhost.localdomain bash[2610]: VblkEmu0pf0
+      Jan 26 22:52:34 localhost.localdomain systemd[1]: Started SNAP Emulation Daemon.
+
+#4. 建议在主机测添加blacklist以避免hang机（可选）
+#/etc/modprobe.d/virtio.conf
+#添加：
+    blacklist virtio
+    blacklist virtio_net
+    blacklist virtio_pci
+    blacklist virtio_ring
+    blacklist virtio_blk
+    install virtio /bin/false
+    install virtio_net /bin/false
+    install virtio_pci /bin/false
+    install virtio_ring /bin/false
+    install virtio_blk /bin/false
+
+#5. 在主机侧设置固件参数（当前版本需要设置，后续版本我们会将其置为默认打开）
+mlxconfig -d /dev/mst/mt41686_pciconf0 s EXP_ROM_VIRTIO_BLK_UEFI_x86_ENABLE=1
+#注意：一定是在主机测设置。
+
+#6. 冷启动设备
+
+#7. 进入 bios，确认网卡pcie模式和boot模式都为UEFI，或DUAL模式
+#a）部分服务器可直接识别virtioblk， 在boot选项中，可以选择virtio blk启动。
+#b）有的服务器bios无法直接识别，这时在bios的boot选项下会增加如下选项：
+#“add new options ”
+#在其中添加boot设备，
+#add new options - > add boot option ，输入您想为boot设备起的名称，如virtioblk
+#path for boot option 选择 efi/boot/bootx64.efi
+#添加完成后，将出现boot设备。
+#如果该boot设备未在选择boot order的option菜单出现，保存设置，重启服务器再进入bios，会在boot option出现add dvd bbs xxxxxxx的选项，在里面选择您创建的virtioblk设备，就可以boot order中找到virtio blk作为启动设备了。
+
+#c)如果以上方式都不奏效，需要联系服务器厂家看是否是bios版本过旧或不兼容导致的不支持virtio的UEFI启动。
