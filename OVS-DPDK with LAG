@@ -3,6 +3,10 @@
 mlxconfig -d /dev/mst/mt41682_pciconf0 s LAG_RESOURCE_ALLOCATION=1
 #冷启动
 
+#创建virtio接口，例如用如下方式创建1个队列（3是1+2，2是双向数据面）的1500大小MTU的
+virtnet hotplug -i mlx5_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 1024
+#可以通过ip link show看生成的sf代表口，在此假定在卡上生成的sf representor端口为sf2000
+
 #执行以下命令，可以把以下命令写到脚本执行
 
 Set “hash” bond script:
@@ -29,7 +33,10 @@ sleep 1
 devlink dev eswitch set pci/0000:03:00.1 mode switchdev
 sleep 1
 
- 
+#重启virtio-net-controller，这步应该能让virtio与switchdev同步起来
+systemctl start virtio-net-controller.service
+sleep 3
+
 #添加bond0接口
 ip link add bond0 type bond
 sleep 1
@@ -81,19 +88,7 @@ ovs-vsctl add-port dpdkbr0 bond0 -- set Interface bond0 type=dpdk options:dpdk-d
 
 # 添加pf和sf
 ovs-vsctl add-port dpdkbr0 pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk-devargs="0000:03:00.0,representor=[65535]"
-ovs-vsctl add-port dpdkbr0 en3f0pf0sf88 -- set Interface en3f0pf0sf88 type=dpdk options:dpdk-devargs="0000:03:00.0,representor=sf88"
+# 前期生成的sf端口，将其加入ovs
+ovs-vsctl add-port dpdkbr0 en3f0pf0sf2000 -- set Interface en3f0pf0sf2000 type=dpdk options:dpdk-devargs=0000:03:00.0,representor=sf2000
 
-
-#后台同事建议用如下方式创建SF88端口，:
-
-/opt/mellanox/iproute2/sbin/mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88
-sleep 1
-/opt/mellanox/iproute2/sbin/mlxdevm port function set pci/0000:03:00.0/229408 state active
-sleep 1
-echo mlx5_core.sf.2 > /sys/bus/auxiliary/devices/mlx5_core.sf.2/driver/unbind
-sleep 1
-echo mlx5_core.sf.2 > /sys/bus/auxiliary/drivers/mlx5_core.sf/bind
-
-#个人建议可以用
-virtnet hotplug -i mlx5_bond_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 1024
 
