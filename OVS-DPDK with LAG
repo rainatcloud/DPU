@@ -33,6 +33,20 @@ sleep 1
 devlink dev eswitch set pci/0000:03:00.1 mode switchdev
 sleep 1
 
+#创建virtio net conf文件
+cd /opt/mellanox/mlnx_virtnet
+vi virtnet.conf
+#文件中加入这些内容
+    {
+    "ib_dev_lag": "mlx5_bond_0",
+    "ib_dev_for_static_pf": "mlx5_bond_0",
+    "is_lag": 1,
+    "pf_mac": "00:11:22:33:44:55",
+    "recovery": 1,
+    "sf_pool_percent": 0,
+    "sf_pool_force_destroy": 0
+    }
+
 #重启virtio-net-controller，这步应该能让virtio与switchdev同步起来
 systemctl start virtio-net-controller.service
 sleep 3
