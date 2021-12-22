@@ -16,8 +16,8 @@ git submodule update --init
 
 # 安装librados和librbd
 yum install -y librbd-devel.aarch64
-# 配置spdk选项，这里选择加上rbd，需要先安装librados和librbd
-./configure --prefix=/opt/mellanox/spdk-custom --disable-tests --disable-unit-tests --without-crypto --without-fio --with-vhost --without-pmdk --with-rbd --with-rdma --with-shared --with-iscsi-initiator --without-vtune
+# 配置spdk选项，这里选择加上rbd，需要先安装librados和librbd, 最后一个选项不能落下~~
+./configure --prefix=/opt/mellanox/spdk-custom --disable-tests --disable-unit-tests --without-crypto --without-fio --with-vhost --without-pmdk --with-rbd --with-rdma --with-shared --with-iscsi-initiator --without-vtune --without-isal
 
 # 编译
 make && sudo make install
@@ -27,9 +27,11 @@ cp -r dpdk/build/lib/* /opt/mellanox/spdk-custom/lib/
 cp -r dpdk/build/include/* /opt/mellanox/spdk-custom/include/
 
 # 编译snap，首先要有mlnx_snap的源码
+# 本文档用的源码是：mlnx-snap-3.5.0-12.mlnx.el8.src.rpm
 ./configure --with-snap --with-spdk=/opt/mellanox/spdk-custom --without-gtest --prefix=/usr
 make -j8 && sudo make install
 
-Append additional custom libraries to the mlnx-snap application. Set LD_PRELOAD="/opt/
-mellanox/spdk/lib/libspdk_custom_library.so".
-Run application.
+# Append additional custom libraries to the mlnx-snap application. 
+Set LD_PRELOAD="/opt/mellanox/spdk/lib/libspdk_custom_library.so"
+
+# Run application.
