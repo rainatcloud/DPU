@@ -31,6 +31,9 @@ cp -r dpdk/build/include/* /opt/mellanox/spdk-custom/include/
 ./configure --with-snap --with-spdk=/opt/mellanox/spdk-custom --without-gtest --prefix=/usr
 make -j8 && sudo make install
 
+# 修改spdk_tgt服务启动
+cat /usr/lib/systemd/system/spdk_tgt.service
+
 # Append additional custom libraries to the mlnx-snap application. 
 Set LD_PRELOAD="/opt/mellanox/spdk/lib/libspdk_custom_library.so"
 
