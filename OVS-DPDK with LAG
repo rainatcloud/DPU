@@ -33,24 +33,6 @@ sleep 1
 devlink dev eswitch set pci/0000:03:00.1 mode switchdev
 sleep 1
 
-#创建virtio net conf文件
-cd /opt/mellanox/mlnx_virtnet
-vi virtnet.conf
-#文件中加入这些内容
-    {
-    "ib_dev_lag": "mlx5_bond_0",
-    "ib_dev_for_static_pf": "mlx5_bond_0",
-    "is_lag": 1,
-    "pf_mac": "00:11:22:33:44:55",
-    "recovery": 1,
-    "sf_pool_percent": 0,
-    "sf_pool_force_destroy": 0
-    }
-
-#重启virtio-net-controller，这步应该能让virtio与switchdev同步起来
-systemctl start virtio-net-controller.service
-sleep 3
-
 #添加bond0接口
 ip link add bond0 type bond
 sleep 1
@@ -78,8 +60,25 @@ ip link set p0 up
 ip link set p1 up
 ip link set bond0 up
 
+#创建virtio net conf文件
+cd /opt/mellanox/mlnx_virtnet
+vi virtnet.conf
+#文件中加入这些内容
+    {
+    "ib_dev_lag": "mlx5_bond_0",
+    "ib_dev_for_static_pf": "mlx5_bond_0",
+    "is_lag": 1,
+    "pf_mac": "00:11:22:33:44:55",
+    "recovery": 1,
+    "sf_pool_percent": 0,
+    "sf_pool_force_destroy": 0
+    }
 
-把端口添加到ovs-dpdk
+#重启virtio-net-controller，这步应该能让virtio与switchdev同步起来
+systemctl start virtio-net-controller.service
+sleep 3
+
+#把端口添加到ovs-dpdk
 
 #如果没有enable大页，手动创建大页内存
 echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
