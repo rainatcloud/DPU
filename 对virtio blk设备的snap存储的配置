@@ -1,0 +1,50 @@
+
+#对于virtio-blk，需要打开以下固件参数
+#注意默认Bluefield-2 DPU的PCIe地址是03:00.0，所以我们直接用了pcie地址
+#固件配置和固件版本有些强相关，需要确认固件版本是不是最新
+
+mlxconfig -d 03:00.0 set VIRTIO_BLK_EMULATION_ENABLE=1 VIRTIO_BLK_EMULATION_NUM_MSIX=33
+PCI_SWITCH_EMULATION_ENABLE=1 PCI_SWITCH_EMULATION_NUM_PORT=16 VIRTIO_BLK_EMULATION_NUM_PF=0
+VIRTIO_NET_EMULATION_NUM_PF=0
+
+#配置之后，注意要冷启动power cycle
+
+#BF-2卡内的spdk是NVDIA修改过的版本，命令是spdk_rpc.py
+#假定对端是NVME target，地址是172.17.102.1，已经创建了nqn.2021-06.io.spdk:ns的namespace
+spdk_rpc.py bdev_nvme_attach_controller -b Nvme0 -t rdma -a 172.17.102.1 -f ipv4 -s 4420 -n nqn.2021-06.io.spdk:ns
+#前面的步骤会返回挂载盘bdev名称，这里按照命名惯例，一般是Nvme0n1
+
+#创建一个32个队列的virtio_blk设备到snap，33是队列数，其中一个是管理队列
+snap_rpc.py emulation_device_attach mlx5_0 virtio_blk --num_msix 33
+
+#挂载设备到主机，可以指定segment大小和数量，pf_id的值是上一个命令的返回index值，seg_max和size_max可以不指定，就会用缺省值
+snap_rpc.py controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev Nvme0n1 --pf_id 1 --seg_max 32 --size_max 32768
+
+#查询IO统计
+snap_rpc.py controller_virtio_blk_get_iostat
+
+#挂起和恢复
+snap_rpc.py controller_virtio_blk_suspend
+snap_rpc.py controller_virtio_blk_resume
+
+#查询创建出来的设备
+snap_rpc.py emulation_functions_list
+snap_rpc.py mlnx_snap_params_list
+
+#如果用内核态nvme，可以通过aio方式挂到spdk
+modprobe nvme_rdma
+nvme connect -t rdma  -a 172.17.102.1 -n nqn.2021-06.io.spdk:ns -s 4420
+spdk_rpc.py bdev_aio_create /dev/nvme0n1 aio1
+snap_rpc.py emulation_device_attach mlx5_0 virtio_blk --num_msix 33
+snap_rpc.py controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev aio1 --pf_id 0 --seg_max 32 --size_max 32768
+
+
+#删除snap设备 
+snap_rpc.py emulation_device_detach -i 0 mlx5_0
+#查一下是不是删成功了
+snap_rpc.py emulation_functions_list
+
+#主机侧如果没有看到设备，可能是没加载驱动，可以手动加载
+modprobe virtio_blk
+modprobe virtio_pci
+
