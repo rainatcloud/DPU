@@ -104,4 +104,6 @@ ovs-vsctl add-port dpdkbr0 pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk
 # 前期生成的sf端口，将其加入ovs
 ovs-vsctl add-port dpdkbr0 en3f0pf0sf2000 -- set Interface en3f0pf0sf2000 type=dpdk options:dpdk-devargs=0000:03:00.0,representor=sf2000
 
+#注意如果有snap，需要重启snap的服务。
+systemctl restart mlnx_snap
 
