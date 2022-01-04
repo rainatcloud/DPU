@@ -121,3 +121,19 @@ ip link show
     link/ether ca:10:34:2d:ba:82 brd ff:ff:ff:ff:ff:ff
 14: enp3s0f0s88: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
 
+#设备也可以看到了
+
+devlink port show
+
+#显示结果有sf.3
+pci/0000:03:00.0/262143: type eth netdev p0 flavour physical port 0
+pci/0000:03:00.0/196608: type eth netdev pf0hpf flavour pcipf pfnum 0
+pci/0000:03:00.1/327679: type eth netdev p1 flavour physical port 1
+pci/0000:03:00.1/262144: type eth netdev pf1hpf flavour pcipf pfnum 1
+auxiliary/mlx5_core.sf.2/1310720: type eth netdev enp3s0f0s0 flavour physical port 0
+auxiliary/mlx5_core.sf.3/1376256: type eth netdev enp3s0f0s88 flavour physical port 0
+
+
+#不用可以这么删了
+mlxdevm port del pci/0000:03:00.0/229377
+
