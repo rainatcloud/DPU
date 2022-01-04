@@ -1,10 +1,12 @@
 
-#创建bond之后，SF端口都会丢失，需要重建SF端口
+# 创建bond之后，SF端口都会丢失，需要重建SF端口
 
-#先看一下当前的端口情况
+# 先看一下当前的端口情况
+
 devlink port show
 
-#可见有physical的端口0和1，还有其代表口，有一个系统创建好的sf
+# 可见有physical的端口0和1，还有其代表口，有一个系统创建好的sf
+
 pci/0000:03:00.0/262143: type eth netdev p0 flavour physical port 0
 pci/0000:03:00.0/196608: type eth netdev pf0hpf flavour pcipf pfnum 0
 pci/0000:03:00.1/327679: type eth netdev p1 flavour physical port 1
@@ -12,22 +14,28 @@ pci/0000:03:00.1/262144: type eth netdev pf1hpf flavour pcipf pfnum 1
 auxiliary/mlx5_core.sf.2/1310720: type eth netdev enp3s0f0s0 flavour physical port 0
 
 
-#创建一个88的sf端口，mlxdevm在这个路径
+# 创建一个88的sf端口，mlxdevm在这个路径
+
 mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88
 
-#添加一下路径
+# 添加一下路径
+
 PATH=$PATH:/opt/mellanox/iproute2/sbin/
 
-#可以选择设置trust模式
+# 可以选择设置trust模式
+
 mlxdevm port function set pci/0000:03:00.0/229377 trust on
 
-#把状态拉起来
+# 把状态拉起来
+
 mlxdevm port function set pci/0000:03:00.0/229377 state active
 
-#设一下Mac地址
+# 设一下Mac地址
+
 mlxdevm port function set pci/0000:03:00.0/229377 hw_addr 00:00:00:00:88:88
 
-#看一下端口
+# 看一下端口
+
 mlxdevm port show en3f0pf0sf88
 
 执行结果：
@@ -35,7 +43,8 @@ pci/0000:03:00.0/229377: type eth netdev en3f0pf0sf88 flavour pcisf controller 0
   function:
     hw_addr 00:00:00:00:88:88 state active opstate detached roce true max_uc_macs 128 trust on
 
-#看下详细信息
+# 看下详细信息
+
 mlxdevm port show en3f0pf0sf88 -jp
 
 执行结果：
@@ -60,9 +69,12 @@ mlxdevm port show en3f0pf0sf88 -jp
     }
 }
 
-#但是到此为止，还是只能看见sf的代表口
+# 但是到此为止，还是只能看见sf的代表口
+
 ethtool -i en3f0pf0sf88
-#可见结果为rep的代表口驱动
+
+# 可见结果为rep的代表口驱动
+
 driver: mlx5e_rep
 version: 5.4.0-1022.23.g3f6e5a6-bluefiel
 firmware-version: 24.32.1010 (MT_0000000540)
@@ -74,30 +86,36 @@ supports-eeprom-access: no
 supports-register-dump: no
 supports-priv-flags: no
 
-#devlink看下pcie设备
+# devlink看下pcie设备
+
 devlink dev show
 
-#可见没有这个sf设备
+# 可见没有这个sf设备
+
 pci/0000:03:00.0
 pci/0000:03:00.1
 auxiliary/mlx5_core.sf.2
 
-#这个才是
+# 这个才是
+
 cat /sys/bus/auxiliary/devices/mlx5_core.sf.3/sfnum
 88
 
 readlink /sys/bus/auxiliary/devices/mlx5_core.sf.3
 ../../../devices/pci0000:00/0000:00:00.0/0000:01:00.0/0000:02:00.0/0000:03:00.0/mlx5_core.sf.3
 
-#缺省情况下SF是attach到配置驱动（configuration driver）mlx5_core.sf_cfg
-#必须把SF从这个解绑然后绑到mlx5_core.sf驱动才能使用，我们把这个设备从sf的驱动解绑
+# 缺省情况下SF是attach到配置驱动（configuration driver）mlx5_core.sf_cfg
+# 必须把SF从这个解绑然后绑到mlx5_core.sf驱动才能使用，我们把这个设备从sf的驱动解绑
+
 echo mlx5_core.sf.3 >  /sys/bus/auxiliary/devices/mlx5_core.sf.3/driver/unbind
 echo mlx5_core.sf.3 > /sys/bus/auxiliary/drivers/mlx5_core.sf/bind
 
-#看到端口，ok
+# 看到端口，ok
+
 ip link show
 
-#en3f0pf0sf88是SF口，enp3s0f0s88是代表口
+# en3f0pf0sf88是SF口，enp3s0f0s88是代表口
+
 ......
 13: en3f0pf0sf88: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
     link/ether ca:10:34:2d:ba:82 brd ff:ff:ff:ff:ff:ff
