@@ -1,0 +1,15 @@
+
+# dump 流表
+ovs-appctl dpctl/dump-flows -m
+
+# 卸载状态
+ovs-appctl dpctl/offload-stats-show –m
+
+# contrack表dump
+ovs-appctl dpctl/dump-conntrack -m
+
+# 接口状态dump，软硬都有
+ovs-appctl dpif-netdev/pmd-stats-show | grep rec
+
+# dump 硬件流表
+mlx_steering_dump_parser -p 25788 -f /tmp/test.csv -tc
