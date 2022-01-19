@@ -41,7 +41,7 @@ ip link set bond0 down
 sleep 1
 
 #设置bond 4
-ip link set bond0 type bond miimon 100 mode 4
+ip link set bond0 type bond mode 802.3ad miimon 100 updelay 100 downdelay 100 xmit_hash_policy layer3+4
 sleep 1
 
 ip link set p0 down
