@@ -1,0 +1,7 @@
+
+#检查是否GA的卡，非GA卡无法用GA secure的bfb
+mlxbf-bootctl
+
+#卡上温度
+mget_temp -d /dev/mst/mt41686_pciconf0 
+
