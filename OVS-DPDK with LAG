@@ -3,16 +3,13 @@
 mlxconfig -d /dev/mst/mt41682_pciconf0 s LAG_RESOURCE_ALLOCATION=1
 #冷启动
 
-#创建virtio接口，例如用如下方式创建1个队列（3是1+2，2是双向数据面）的1500大小MTU的
-virtnet hotplug -i mlx5_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 1024
-#可以通过ip link show看生成的sf代表口，在此假定在卡上生成的sf representor端口为sf2000
 
 #执行以下命令，可以把以下命令写到脚本执行
 
 Set “hash” bond script:
 #!/bin/sh -x
 
-#确保关闭switchdev模式
+#确保关闭switchdev模式，这步可能会引起core trace，建议不用，待修改
 devlink dev eswitch set pci/0000:03:00.0 mode legacy
 sleep 1
 
@@ -77,6 +74,11 @@ vi virtnet.conf
 #重启virtio-net-controller，这步应该能让virtio与switchdev同步起来
 systemctl start virtio-net-controller.service
 sleep 3
+
+
+#创建virtio接口，例如用如下方式创建1个队列（3是1+2，2是双向数据面）的1500大小MTU的
+virtnet hotplug -i mlx5_bond_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 1024
+#可以通过ip link show看生成的sf代表口，在此假定在卡上生成的sf representor端口为sf2000
 
 #把端口添加到ovs-dpdk
 
