@@ -1,0 +1,22 @@
+
+# make sure the ovs have set the offload flag and configurations 
+ovs-vsctl get o . other
+# it returns below in my setup
+# {dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535]", dpdk-init="true", dpdk-socket-mem="1024", hw-offload="true"}
+
+# add bridge for pf/bond interface
+ovs-vsctl --no-wait add-br br-ext -- set bridge br-ext datapath_type=netdev
+
+# add bridge for vDPA or SF rep interfaces and vxlan interface
+ovs-vsctl --no-wait add-br br-int -- set bridge br-int datapath_type=netdev
+
+# add ip address to the bridge as local ip addr
+ip addr add 11.7.158.45/16 dev br-ext
+ip link set br-ext up
+
+# add vxlan interface to the br-int bridge
+ovs-vsctl add-port br-int vxlan0 -- set interface vxlan0 type=vxlan options:local_ip=11.7.158.45 options:remote_ip=11.7.158.130 options:key=98
+
+# add pf/bond interface to the br-ext bridge
+ovs-vsctl --no-wait add-port br-ext bond1 -- set Interface bond1 type=dpdk -- set Interface bond1 options:dpdk-devargs=0000:03:00.0
+
