@@ -1,34 +1,11 @@
  
 #采用hash模式固件配置，设置lag模式为hash
 mlxconfig -d /dev/mst/mt41682_pciconf0 s LAG_RESOURCE_ALLOCATION=1
+
+#修改文件 /etc/mellanox/mlnx-bf.conf
+#添加 LAG_HASH_MODE="yes"
+
 #冷启动
-
-
-#执行以下命令，可以把以下命令写到脚本执行
-
-Set “hash” bond script:
-#!/bin/sh -x
-
-#确保关闭switchdev模式，这步可能会引起core trace，建议不用，待修改
-devlink dev eswitch set pci/0000:03:00.0 mode legacy
-sleep 1
-
-devlink dev eswitch set pci/0000:03:00.1 mode legacy
-sleep 1
-
-#打开hash模式
-echo "hash" > /sys/class/net/p0/compat/devlink/lag_port_select_mode
-sleep 1
-
-echo "hash" > /sys/class/net/p1/compat/devlink/lag_port_select_mode
-sleep 1
-
-#打开switchdev模式
-devlink dev eswitch set pci/0000:03:00.0 mode switchdev
-sleep 1
-
-devlink dev eswitch set pci/0000:03:00.1 mode switchdev
-sleep 1
 
 #添加bond0接口
 ip link add bond0 type bond
