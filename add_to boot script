@@ -1,0 +1,18 @@
+#在rc.local中加入需要运行的脚本，示例如下
+vi /etc/rc.local
+/bin/bash /etc/auto_bond/auto_lag_asap_cx6.sh >>/dev/null
+
+#修改为可执行
+chmod 755 /etc/rc.d/rc.local
+
+#修改rc-local服务文件
+vi /usr/lib/systemd/system/rc-local.service
+
+#add below
+[Install]
+WantedBy=multi-user.target
+
+#enable和start服务
+systemctl daemon-reload
+systemctl start rc-local
+systemctl enable rc-local
