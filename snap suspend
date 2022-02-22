@@ -1,0 +1,6 @@
+
+#draft,待修改
+snap_rpc.py controller_virtio_blk_suspend <controller>
+
+snap_rpc.py emulation_device_detach，
+spdk_rpc.py bdev_nvme_detach_controller
