@@ -1,0 +1,61 @@
+
+#下载rshim，RPM可以用如下文件
+#也可以到https://developer.nvidia.com/networking/doca 最下方的软件下载区下载
+
+https://www.mellanox.com/downloads/BlueField/RSHIM/rshim-2.0.6-3.ge329c69.el7.centos.x86_64.rpm
+
+#在主机安装rshim，注意可能有些依赖包需要装
+rpm -ivh rshim-2.0.6-3.ge329c69.el7.centos.x86_64.rpm
+
+#安装之后启动rshim服务
+systemctl start rshim
+
+#安装成功之后可以见到如下运行结果：
+# systemctl status rshim
+● rshim.service - rshim driver for BlueField SoC
+   Loaded: loaded (/usr/lib/systemd/system/rshim.service; enabled; vendor preset: disabled)
+   Active: active (running) since Sun 2022-02-13 14:10:04 IST; 1 weeks 1 days ago
+     Docs: man:rshim(8)
+  Process: 1776 ExecStart=/usr/sbin/rshim $OPTIONS (code=exited, status=0/SUCCESS)
+ Main PID: 1778 (rshim)
+    Tasks: 6 (limit: 304956)
+   Memory: 4.7M
+   CGroup: /system.slice/rshim.service
+           └─1778 /usr/sbin/rshim
+
+Feb 13 14:10:04 localhost.localdomain systemd[1]: Starting rshim driver for BlueField SoC...
+Feb 13 14:10:04 localhost.localdomain systemd[1]: Started rshim driver for BlueField SoC.
+Feb 13 14:10:04 localhost.localdomain rshim[1778]: Probing pcie-0000:84:00.2
+Feb 13 14:10:04 localhost.localdomain rshim[1778]: create rshim pcie-0000:84:00.2
+Feb 13 14:10:05 localhost.localdomain rshim[1778]: rshim0 attached
+
+#可以在/dev下见到rshim的目录
+#ls /dev/rshim0/
+boot     console  misc     rshim
+
+#可以通过screen或者minicom命令来通过com口连接卡里的console进入到卡里linux系统
+#命令如下
+screen /dev/rshim0/console 115200
+
+
+#cat bfb image文件到rshim0/boot来安装
+#假如bfb文件为：DOCA_v1.2.0_BlueField_OS_CentOS_8.2-5.4.0-1022.23.g3f6e5a6-bluefield-5.5-1.0.3.2-3.8.0.11969-1-aarch64.bfb 
+cat DOCA_v1.2.0_BlueField_OS_CentOS_8.2-5.4.0-1022.23.g3f6e5a6-bluefield-5.5-1.0.3.2-3.8.0.11969-1-aarch64.bfb > /dev/rshim0/boot
+
+#建议在安装bfb之前，通过screen的console口连到卡里，这样可以在安装image的时候，看到卡里的安装进度
+#cat这步返回比较快，但是并不代表卡里已经安装完成，因此要等卡里安装完成重新启动才能登入
+
+#等待卡里安装好系统之后，可以在主机通过网络口登入卡里
+#rshim启动成功之后，主机侧会有tmfifo_net0网口出现
+#给tmfifo_net0配如下ip地址
+ip addr add dev tmfifo_net0 192.168.100.1/30
+
+#然后可以在主机侧通过ssh登录到卡里
+ssh 192.168.100.2
+
+#输入账号密码即可在卡里操作
+
+
+
+
+cat /dev/rshim0/boot
