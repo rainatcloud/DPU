@@ -1,0 +1,14 @@
+#draft, 待修改
+
+#安装如下文件，从NVIDIA Support那要压缩包
+#忽略此文件件夹信息：/auto/sw_mc_soc_release/BlueField-3.8.0.11969/BlueField-3.8.0.11969.tar.xz
+
+BlueField-3.8.5.12027.tar.xz
+
+#Extract it:
+tar xvf BlueField-3.8.5.12027.tar.xz
+cd /root/BlueField-3.8.5.12027/distro/rhel/pxeboot/
+
+#Follow README file
+
+
