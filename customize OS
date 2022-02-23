@@ -9,6 +9,10 @@ BlueField-3.8.5.12027.tar.xz
 tar xvf BlueField-3.8.5.12027.tar.xz
 cd /root/BlueField-3.8.5.12027/distro/rhel/pxeboot/
 
-#Follow README file
+#准备好iso文件，这里以centos7.4为例
+    http://archive.kernel.org/centos-vault/altarch/7.4.1708/isos/aarch64/CentOS-7-aarch64-Everything.iso
 
+#先不考虑OFED安装
+
+# ./setup.sh -d <BF_INST_DIR> -i <centos-installation.iso> [-c <ttyAMA0 | ttyAMA1 | rshim>]  [-o ofed-dud.iso] [-k]
 
