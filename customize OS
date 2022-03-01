@@ -1,12 +1,20 @@
 #draft, 待修改
 
-#安装如下文件，从NVIDIA Support那要压缩包
+#PXE安装操作系统
+#将如下文件拷贝到PXE服务器，从NVIDIA Support那要压缩包
+#注意：Bluefield需要插好URAT的线
 #忽略此文件件夹信息：/auto/sw_mc_soc_release/BlueField-3.8.0.11969/BlueField-3.8.0.11969.tar.xz
 
 BlueField-3.8.5.12027.tar.xz
 
 #Extract it:
 tar xvf BlueField-3.8.5.12027.tar.xz
+
+#修改一下内核版本
+cd /root/BlueField-3.8.0.11969/distro/rhel/bluefield_dd/
+#看一下里面有哪些内核的iso，选一个接近的，如bluefield_dd-4.18.0-193.19.1.el8_2.aarch64.iso
+
+
 cd /root/BlueField-3.8.5.12027/distro/rhel/pxeboot/
 
 #准备好iso文件，这里以centos7.4为例
@@ -14,5 +22,12 @@ cd /root/BlueField-3.8.5.12027/distro/rhel/pxeboot/
 
 #先不考虑OFED安装
 
-# ./setup.sh -d <BF_INST_DIR> -i <centos-installation.iso> [-c <ttyAMA0 | ttyAMA1 | rshim>]  [-o ofed-dud.iso] [-k]
+#修改一下脚本用之前选择的内核：
+#将这一列改一下：
+BF_DD_FILE=${BF_ROOT}/distro/rhel/bluefield_dd/bluefield_dd-${KER_VER}.iso
+#改为
+BF_DD_FILE=${BF_ROOT}/distro/rhel/bluefield_dd/bluefield_dd-4.18.0-80.7.2.el7.aarch64.iso
+
+#然后执行
+./setup.sh -d /root/BlueField-3.8.0.11969 -i /root/CentOS-7-aarch64-Everything-2009.iso -c ttyAMA0
 
