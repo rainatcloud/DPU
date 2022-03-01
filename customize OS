@@ -11,7 +11,7 @@ BlueField-3.8.5.12027.tar.xz
 tar xvf BlueField-3.8.5.12027.tar.xz
 
 #修改一下内核版本
-cd /root/BlueField-3.8.0.11969/distro/rhel/bluefield_dd/
+cd /root/BlueField-3.8.5.12027/distro/rhel/bluefield_dd/
 #看一下里面有哪些内核的iso，选一个接近的，如bluefield_dd-4.18.0-193.19.1.el8_2.aarch64.iso
 
 
@@ -29,5 +29,5 @@ BF_DD_FILE=${BF_ROOT}/distro/rhel/bluefield_dd/bluefield_dd-${KER_VER}.iso
 BF_DD_FILE=${BF_ROOT}/distro/rhel/bluefield_dd/bluefield_dd-4.18.0-80.7.2.el7.aarch64.iso
 
 #然后执行
-./setup.sh -d /root/BlueField-3.8.0.11969 -i /root/CentOS-7-aarch64-Everything-2009.iso -c ttyAMA0
+./setup.sh -d /root/BlueField-3.8.5.12027 -i /root/CentOS-7-aarch64-Everything-2009.iso -c ttyAMA0
 
