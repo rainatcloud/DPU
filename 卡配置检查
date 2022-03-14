@@ -5,3 +5,6 @@ mlxbf-bootctl
 #卡上温度
 mget_temp -d /dev/mst/mt41686_pciconf0 
 
+#jumbo frame场景下设置ovs端口mtu
+ovs-vsctl set Interface p0 mtu_request=9000
+ovs-vsctl set Interface pf0hpf mtu_request=9000
