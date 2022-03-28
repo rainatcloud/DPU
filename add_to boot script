@@ -16,3 +16,11 @@ WantedBy=multi-user.target
 systemctl daemon-reload
 systemctl start rc-local
 systemctl enable rc-local
+
+
+#SoC里面的文件 
+#/usr/lib/systemd/system/mlnx_snap.service
+#可以修改如下：
+a. ExecStartPost=/bin/bash -c "exec sleep 10"  //delay after 
+b. ExecStartPre   //delay before 
+c. add customer script which handle the bond 
