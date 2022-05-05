@@ -1,0 +1,13 @@
+
+#ovs 设置
+ovs-vsctl --no-wait set Open_vSwitch . other_config:dpdk-extra="-w 0000:03:00.0,representor=pf0vf[0,65535] -w 0000:03:00.0,representor=pf1vf[0,65535]"
+ovs-vsctl add-port br-int pf1hpf -- set Interface pf1hpf type=dpdk options:dpdk-devargs="0000:03:00.1,representor=[65535]"
+ovs-vsctl add-port br-int pf1 -- set Interface pf1 type=dpdk options:dpdk-devargs="0000:03:00.1"
+
+#set meter
+ ovs-ofctl -O OpenFlow13 add-meter br-int "meter=1 kbps burst stats bands=type=drop rate=1000000 burst_size=80000"
+
+#apply rate limit control to pf0 ingress like below:
+ ovs-ofctl add-flow br-int table=0,priority=101,in_port="pf1hpf",actions=output:"pf1" -O openflow13
+ ovs-ofctl add-flow br-int table=0,priority=101,in_port="pf1",actions=meter:1,output:"pf1hpf" -O openflow13
+
