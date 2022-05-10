@@ -2,7 +2,7 @@
 # make sure the ovs have set the offload flag and configurations 
 ovs-vsctl get o . other
 # it returns below in my setup
-# {dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535]", dpdk-init="true", dpdk-socket-mem="1024", hw-offload="true"}
+# {dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535]",dv_xmeta_en=1, dpdk-init="true", dpdk-socket-mem="1024", hw-offload="true"}
 
 # add bridge for pf/bond interface
 ovs-vsctl --no-wait add-br br-ext -- set bridge br-ext datapath_type=netdev
