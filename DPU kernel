@@ -1,0 +1,41 @@
+
+#bfb编译的docker做法参考：
+https://github.com/Mellanox/bfb-build
+
+BCLinux的BFB编译，和研发确认，如果是kernel update，只需要重新编译驱动，其他用户态的包不需要重新编译。
+
+用户态的包可以参照这个链接里的命令安装
+https://nam11.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgithub.com%2FMellanox%2Fbfb-build&amp;data=05%7C01%7Cyuxis%40nvidia.com%7C6571ad2c78e340e186c908da31e0462d%7C43083d15727340c1b7db39efd9ccc17a%7C0%7C0%7C637877136555514592%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C3000%7C%7C%7C&amp;sdata=sJVxDZPo40TyR3xR3K8gL5XeERYH0KReW4lzFG9%2FhAY%3D&amp;reserved=0
+
+#所有的基于5.4之上的patch，都在Ubuntu的内核有维护
+#可以在这里找到相应的git tree，相关的patch都有commit信息
+#BlueField的kernel 5.4 git tree在如下链接:
+https://nam11.safelinks.protection.outlook.com/?url=https%3A%2F%2Fgit.launchpad.net%2F~canonical-kernel%2Fubuntu%2F%2Bsource%2Flinux-bluefield%2F%2Bgit%2Ffocal&amp;data=05%7C01%7Cyuxis%40nvidia.com%7C6571ad2c78e340e186c908da31e0462d%7C43083d15727340c1b7db39efd9ccc17a%7C0%7C0%7C637877136555514592%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C3000%7C%7C%7C&amp;sdata=nVUfOM1gHcF0IGtT8WdM6tO8xgp04T3KVqKAPFCU4yw%3D&amp;reserved=0 
+Branch: :”master-next”
+
+
+#3.8.5中的DoCA包含的包按如下分类：
+
+#DOCA runtime packages:
+
+yum install -y libpka mlxbf-bootctl rxp-compiler mlx-OpenIPMI mlnx-libsnap \
+mlnx-dpdk mlx-regex spdk hyperscan mlxbf-bfscripts libvma mlnx-snap doca-dpi \
+doca-flow doca-utils doca-apsh doca-regex dpcp rxpbench virtio-net-controller \
+mlnx-iproute2 rdma-core mlnx-nvme ucx-rdmacm ibacm ofed-scripts ucx-knem \
+mstflint iser isert libxpmem mlnx-ethtool perftest mlnx-tools knem ucx ucx-cma \
+openvswitch python3-openvswitch python3-grpcio python3-protobuf \
+openvswitch-ipsec ucx-xpmem libibverbs librdmacm xpmem ucx-ib libibumad mft-oem \
+mft mlnx-fw-updater mlxbf-bootimages collectx-clxapi bf-release
+
+#DOCA SDK packages:
+
+yum install -y librxpcompiler-devel mlnx-dpdk-devel hyperscan-devel \
+libvma-devel doca-utils-devel doca-flow-devel doca-dpi-devel doca-apsh-devel \
+grpc-devel openvswitch-devel ucx-devel opensm-devel rdma-core-devel \
+libxpmem-devel
+
+#DOCA tools packages:
+
+yum install -y libvma-utils doca-dpi-tools librdmacm-utils opensm-libs opensm \
+srp_daemon infiniband-diags-compat opensm-static libibverbs-utils \
+infiniband-diags
