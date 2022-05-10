@@ -79,9 +79,9 @@ ovs-vsctl add-br dpdkbr0 -- set bridge dpdkbr0 datapath_type=netdev
 ovs-vsctl add-port dpdkbr0 bond0 -- set Interface bond0 type=dpdk options:dpdk-devargs="0000:03:00.0"
 
 # 添加pf和sf
-ovs-vsctl add-port dpdkbr0 pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk-devargs="0000:03:00.0,representor=[65535]"
+ovs-vsctl add-port dpdkbr0 pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk-devargs="0000:03:00.0,representor=[65535],dv_xmeta_en=1"
 # 前期生成的sf端口，将其加入ovs
-ovs-vsctl add-port dpdkbr0 en3f0pf0sf2000 -- set Interface en3f0pf0sf2000 type=dpdk options:dpdk-devargs=0000:03:00.0,representor=sf2000
+ovs-vsctl add-port dpdkbr0 en3f0pf0sf2000 -- set Interface en3f0pf0sf2000 type=dpdk options:dpdk-devargs=0000:03:00.0,representor=sf2000,dv_xmeta_en=1
 
 #注意如果有snap，需要重启snap的服务。
 systemctl restart mlnx_snap
