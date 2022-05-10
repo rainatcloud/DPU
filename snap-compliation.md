@@ -8,9 +8,14 @@ git clone https://github.com/spdk/spdk
 cd spdk
 git tag -l
 
-# 当前选择21.07版本
+# 2021年的3.8.5release选择21.07版本，2022年4月的3.9.0版本选择22.01版本的spdk
 git checkout tags/v21.07
 git submodule update --init
+
+#Nvidia DPU 4月份的spdk版本基于22.01有修改，建议基于nv的版本加上自己的patch编译，git代码如下
+https://github.com/Mellanox/spdk/tree/v22.01.nvda
+
+
 
 # 也可以忽略之前两步，直接下载相应版本代码到Bluefield SOC
 
