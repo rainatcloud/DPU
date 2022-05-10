@@ -39,3 +39,8 @@ libxpmem-devel
 yum install -y libvma-utils doca-dpi-tools librdmacm-utils opensm-libs opensm \
 srp_daemon infiniband-diags-compat opensm-static libibverbs-utils \
 infiniband-diags
+
+
+#问题
+1. 为什么区分kernel driver和用户态的，怎么区分的，为什么rdma-core和iproute这种都不算在内核态driver
+2. BF soc driver是什么？
