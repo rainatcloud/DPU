@@ -3,5 +3,10 @@
  echo 'EiS4O0xaTBByxFpoe8eB0NtvQGtwaR68OAUxEd3OeNavtGVatuC69nKMLOOY4g3NtRfzrj9x3HR9qjYn4fUeDHQU0Nmh5m-1m655ZTLRTJFz95H5AqPyHmm2rQioU0luMO-NDd23ljpgK4BDfH7Zipz0QpPeSlFfWDgJWo4vHuw=' > bclinux/7.6/license
  ./bfb-build bclinux 7.6
  
- 
+#配置脚本，以及顺序
+cat /etc/modprobe.d/mlnx-bf.conf
+install ib_umad /sbin/modprobe --ignore-install ib_umad $CMDLINE_OPTS && (if [ -x /sbin/mlnx_bf_configure ]; then /sbin/mlnx_bf_configure; fi)
+
+/sbin/mlnx_bf_configure
+
  
