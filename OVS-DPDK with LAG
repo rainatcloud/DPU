@@ -63,7 +63,7 @@ virtnet hotplug -i mlx5_bond_0 -f 0x028 -m 0C:C4:7A:FF:22:93 -t 1500 -n 3 -s 102
 echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
 
 #设置ovs配置，65535为卡上pf的代表口，其他0,1,2,3为VF代表口，酌情添加
-ovs-vsctl --no-wait set Open_vSwitch . other_config:dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535]"
+ovs-vsctl --no-wait set Open_vSwitch . other_config:dpdk-extra="-w 0000:03:00.0,representor=[0,1,2,3,65535],dv_xmeta_en=1"
 
 #配置dpdk和内存
 ovs-vsctl set Open_vSwitch . other_config:dpdk-socket-mem=1024
