@@ -1,8 +1,25 @@
+#编译方法步骤：
 
-#缺省编译
- echo 'EiS4O0xaTBByxFpoe8eB0NtvQGtwaR68OAUxEd3OeNavtGVatuC69nKMLOOY4g3NtRfzrj9x3HR9qjYn4fUeDHQU0Nmh5m-1m655ZTLRTJFz95H5AqPyHmm2rQioU0luMO-NDd23ljpgK4BDfH7Zipz0QpPeSlFfWDgJWo4vHuw=' > bclinux/7.6/license
- ./bfb-build bclinux 7.6
- 
+1.	解压zip包，确认包含内核更新的更新脚本已经在zip包内，否则需要额外解压到当前目录覆盖bclinux/7.6目录下的文件
+2.	cd bfb-build
+3.	需要先使用一个license运行：# echo 'weNH50IllblhwQGq9SaEGW5FtijaYlI_PamZWLDBx06lmiGW_q_yzE7Pm81bs9paIB1949SnccBJjurozZ1TF4vEoMdsYcUabb-wPQQtKsRYWPUQ-itaFaBGcM6URaqdv_rPcg2BoVhGKAvtQVXIFU8WZd2jP4hnn_s9KDhGF-k=' > bclinux/7.6/license 
+4.	执行# ./bfb-build bclinux 7.6来编译bclinux
+5.	由于当前版本的license不是基于我们的server生成，我们需要运行如下命令生成
+6.	运行docker容器来获取sys-id
+# docker run -t -rm --privileged -e container=docker  --name BlueField_OS_BCLinux_7.6_update_kernel    --mount type=bind,source=/dev,target=/dev   --mount type=bind,source=/sys,target=/sys   --mount type=bind,source=/proc,target=/proc  bfb_runtime_bclinux7.6 sys-id
+7.	获取到license之后，重新运行第3步，把新的license写到bclinux/7.6/license中，然后重新运行第4步，即可生成基于bclinux的新的bfb
+8.	生成的BFB文件位于/tmp/bclinux7.6.*/DOCA*.bfb
+9.	Bfb可以直接安装到卡里，也可以基于bfb做卡内pxe安装，pxe安装bfb的流程参见手册的如下章节：
+https://docs.nvidia.com/networking/display/BlueFieldDPUOSLatest/Deploying+DPU+OS+Using+BFB+with+PXEDeploying 
+10.	内核的更新直接在build_bclinux_bfb脚本内：
+ex yum-config-manager --nogpgcheck --add-repo http://mirrors.bclinux.org/bclinux/el7.7/updates/aarch64/
+yum update --nogpgcheck -y kernel-bek-core kernel-bek kernel-bek-modules kernel-bek-devel kernel-bek-headers
+脚本会直接找到以上目录下的内核版本yum安装，然后重新编译驱动和soc驱动。
+如果后续有内核更新，如果直接更新到这个目录，则无需更新脚本，直接运行即可重新编译新的bfb
+如果内核更新不在这个目录，那么修改目录即可
+
+
+
 #配置脚本，以及顺序
 cat /etc/modprobe.d/mlnx-bf.conf
 install ib_umad /sbin/modprobe --ignore-install ib_umad $CMDLINE_OPTS && (if [ -x /sbin/mlnx_bf_configure ]; then /sbin/mlnx_bf_configure; fi)
