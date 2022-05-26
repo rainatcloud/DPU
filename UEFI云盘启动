@@ -3,8 +3,28 @@
 
 #1. 验证固件配置
 #配置静态virtio_blk设备，确认配置了至少一个virtio blk设备（e.g VIRTIO_BLK_EMULATION_NUM_PF=1）
-#新版virtio_blk静可能已经改变，待修改）
-mlxconfig -d 03:00.0 set VIRTIO_BLK_EMULATION_ENABLE=1 VIRTIO_BLK_EMULATION_NUM_MSIX=17 PCI_SWITCH_EMULATION_ENABLE=1 PCI_SWITCH_EMULATION_NUM_PORT=16 VIRTIO_BLK_EMULATION_NUM_PF=1 
+mlxconfig -y -d /dev/mst/mt41686_pciconf0 s \
+                LAG_RESOURCE_ALLOCATION=1 \
+                PF_BAR2_ENABLE=0 \
+                PER_PF_NUM_SF=1
+mlxconfig -y -d /dev/mst/mt41686_pciconf0 s \
+                PCI_SWITCH_EMULATION_ENABLE=1 \
+                PCI_SWITCH_EMULATION_NUM_PORT=16 \
+                ECPF_ESWITCH_MANAGER=1 \
+                ECPF_PAGE_SUPPLIER=1 \
+                SRIOV_EN=0 \
+                PF_SF_BAR_SIZE=8 \
+                PF_TOTAL_SF=64
+mlxconfig -y -d /dev/mst/mt41686_pciconf0.1 s \
+                PF_SF_BAR_SIZE=10 \
+                PF_TOTAL_SF=64
+mlxconfig -y -d /dev/mst/mt41686_pciconf0 s \
+                VIRTIO_BLK_EMULATION_ENABLE=1 \    #开启virtio blk的模拟
+                VIRTIO_BLK_EMULATION_NUM_PF=1 \    #设置一个固定的virtio设备到主机
+                VIRTIO_BLK_EMULATION_NUM_VF=0 \
+                VIRTIO_BLK_EMULATION_NUM_MSIX=33 \    #设置设备的最大队列数（单向34个，双向-1除2）
+                EXP_ROM_VIRTIO_BLK_UEFI_x86_ENABLE=1 \
+                NVME_EMULATION_ENABLE=0               # disable NVME设备的模拟
 
 #2. 方法一：手动创建挂载设备 
 
@@ -42,9 +62,8 @@ systemctl status mlnx_snap  #确认log中显示已经成功生成和挂载设备
     install virtio_ring /bin/false
     install virtio_blk /bin/false
 
-#5. 在主机侧设置固件参数（当前版本需要设置，后续版本我们会将其置为默认打开）
+#5. 设置virtio盘在rom上提供给BIOS的固件参数（老版本需要在主机设置，现在的版本基本上都可以在卡上设置）
 mlxconfig -d /dev/mst/mt41686_pciconf0 s EXP_ROM_VIRTIO_BLK_UEFI_x86_ENABLE=1
-#注意：一定是在主机测设置。
 
 #6. 冷启动设备
 
