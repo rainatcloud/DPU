@@ -3,10 +3,6 @@
 https://github.com/Mellanox/mlx_steering_dump
 
 
-[root@l-csi-0327d mlx_steering_dump]# mst status -v | grep 6DX
-ConnectX6DX(rev:0)      /dev/mst/mt4125_pciconf0.1    04:00.1   mlx5_1          net-p6p2                  0     
-ConnectX6DX(rev:0)      /dev/mst/mt4125_pciconf0      04:00.0   mlx5_0          net-p6p1                  0  
-
 #使用方法，找到dpdk软件的pid,例如如下的testpmd命令的pid是53821
 [root@l-csi-0327d ~]./app/dpdk-testpmd -c 0xfff -a "0000:04:00.0" -- -i --forward-mode=rxonly --auto-start --rxq=4 --txq=4 --nb-cores=4 --> PID 53821
 testpmd> flow create 0 ingress priority 0 group 1 pattern eth dst is 0C:42:A1:98:AA:AC / ipv4 / udp / end actions rss queues 0 1 2 3 end / end
