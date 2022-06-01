@@ -1,0 +1,58 @@
+
+# tcpdump可以抓RDMA包，DPDK包，以及DPU里面挂载在dpdk接口的sf代表口的包，具体使用方法如下
+
+#确认libpcap的版本高于1.9.1，比如下面这个1.9.0的只差一个小版本，就不行，哈哈
+
+$ tcpdump --version
+tcpdump version 4.9.2
+libpcap version 1.9.0-PRE-GIT (with TPACKET_V3)
+OpenSSL 1.1.1c FIPS  28 May 2019
+
+$ tcpdump -i mlx5_0
+tcpdump: mlx5_0: No such device exists
+(SIOCGIFHWADDR: No such device)
+
+#获取libpcap包并解压
+$wget https://www.tcpdump.org/release/libpcap-1.9.1.tar.gz
+$tar xvf libpcap-1.9.1.tar.gz
+
+#编译安装
+$ cd libpcap-1.9.1
+$./configure
+$ make -j 8
+$ make install
+
+#此时看tcpdump，其实还是没变化的
+#此时需要更新ld的查找路径，确保/usr/local/lib在/etc/ld.so.conf文件或者/etc/ld.so.conf.d/目录下的任何一个文件里
+#比如我们加到下面这个文件里
+$ cat doca-runtime.conf
+/usr/local/lib
+...
+
+#执行ldconfig更新/etc/ld.so.cache
+$ ldconfig
+
+#再看tcpdump --version的结果
+$ tcpdump --version
+tcpdump version 4.9.2
+libpcap version 1.9.1 (with TPACKET_V3)
+OpenSSL 1.0.2k-fips  26 Jan 2017
+
+#再执行看tcpdump支持mlx设备情况
+$ tcpdump -D | grep mlx
+18.mlx5_bond_0 (RDMA sniffer)
+19.mlx5_0 (RDMA sniffer)
+20.mlx5_1 (RDMA sniffer)
+21.mlx5_2 (RDMA sniffer)
+22.mlx5_3 (RDMA sniffer)
+
+# 可以抓包了，perfect
+$ tcpdump -i mlx5_0
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on mlx5_0, link-type EN10MB (Ethernet), capture size 262144 bytes
+07:28:38.852253 IP 0.0.0.0.bootpc > 255.255.255.255.bootps: BOOTP/DHCP, Request from 0c:c4:7a:ff:22:96 (oui Unknown), length 276
+07:28:55.111168 IP 0.0.0.0.bootpc > 255.255.255.255.bootps: BOOTP/DHCP, Request from 0c:c4:7a:ff:22:96 (oui Unknown), length 276
+07:29:08.187310 IP 0.0.0.0.bootpc > 255.255.255.255.bootps: BOOTP/DHCP, Request from 0c:c4:7a:ff:22:96 (oui Unknown), length 276
+07:29:08.193303 IP6 :: > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+07:29:08.772258 IP6 :: > ff02::16: HBH ICMP6, multicast listener report v2, 1 group record(s), length 28
+07:29:08.964312 IP6 :: > ff02::1:ff6e:779d: ICMP6, neighbor solicitation, who has fe80::4a45:7fa5:7f6e:779d, length 32
