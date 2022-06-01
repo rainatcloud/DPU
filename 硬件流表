@@ -1,0 +1,59 @@
+
+#工具下载网页
+https://github.com/Mellanox/mlx_steering_dump
+
+
+[root@l-csi-0327d mlx_steering_dump]# mst status -v | grep 6DX
+ConnectX6DX(rev:0)      /dev/mst/mt4125_pciconf0.1    04:00.1   mlx5_1          net-p6p2                  0     
+ConnectX6DX(rev:0)      /dev/mst/mt4125_pciconf0      04:00.0   mlx5_0          net-p6p1                  0  
+
+#使用方法，找到dpdk软件的pid,例如如下的testpmd命令的pid是53821
+[root@l-csi-0327d ~]./app/dpdk-testpmd -c 0xfff -a "0000:04:00.0" -- -i --forward-mode=rxonly --auto-start --rxq=4 --txq=4 --nb-cores=4 --> PID 53821
+testpmd> flow create 0 ingress priority 0 group 1 pattern eth dst is 0C:42:A1:98:AA:AC / ipv4 / udp / end actions rss queues 0 1 2 3 end / end
+
+#执行如下命令dump流表
+[root@l-csi-0327d mlx_steering_dump]./mlx_steering_dump_parser.py -p 53821 -f /tmp/flows.dump
+
+#查看流表
+[root@l-csi-0327d mlx_steering_dump]# python ./mlx_steering_dump_parser.py -f /tmp/flows.dump -t
+domain 0xd23d02: type: FDB, gvmi: 0x0, support_sw_steering True, dev_name uverbs0, package_version 32.0
+      table 0x3257ff0: level: 1, type: FDB
+      table 0x329bc60: level: 0, type: ROOT
+domain 0xd23d00: type: NIC_RX, gvmi: 0x0, support_sw_steering True, dev_name uverbs0, package_version 32.0
+      table 0x329f5b0: level: 10, type: NIC_RX
+         matcher 0x32a0440: priority 0, rx e_anchor 0xf0100013
+            mask: ip_version: 0x4, dmac: 0xffffffffffff, metadata_reg_c_0: 0xffff0000, ip_protocol: 0xff
+            rule 0x329f860
+               match: metadata_reg_c_0: 0x00010000 dmac: 0c:42:a1:98:aa:ac, l3_type: 0x1 protocol: 0x11 
+               action: DEVX_TIR, ICM addr 0x182800006940
+domain 0xd23d01: type: NIC_TX, gvmi: 0x0, support_sw_steering True, dev_name uverbs0, package_version 32.0
+
+
+#以上是用来dump dpdk的流表的，用的是rdma_core，如果用内核的SMFS的流表，采用以下第2种方式
+1. rdma_core: This is the way to dump userspace SW Steering flows (DPDK Applications such as testpmd, OVS-DPDK, etc)
+2. mlnx-ofed kernel steering(SMFS): This is the approach to dump kernel configured SW Steering flows such as one configured via OVS, tc, etc. 
+In order to use this, SMFS needs to be enabled and mode needs to be set to switchdev. Below is how this can be verified
+
+[root@l-csi-0327d mlx_steering_dump]# cat /sys/class/net/p6p1/compat/devlink/mode
+switchdev
+
+[root@l-csi-0327d mlx_steering_dump]# cat /sys/class/net/p6p1/compat/devlink/steering_mode 
+smfs
+
+# 这种情况下可以dump内核的steering rules，我们没有任何正在跑的配置sw steering流的应用，所以可以用如下命令
+
+cat /proc/driver/mlx5_core/smfs_dump/fdb/0000\:04\:00.0 > /tmp/flow2.dmp
+[root@l-csi-0327d mlx_steering_dump]# python mlx_steering_dump_parser.py -f /tmp/flow2.dmp -tv
+domain 0xdf0502: type: FDB, gvmi: 0x0, support_sw_steering True, dev_name 0000:04:00.0, package_version 1.0.3
+      table 0xffff98dccb1af680: level: 165, type: FDB, rx s_anchor 0xf0000000, tx s_anchor 0xf0000001
+         matcher 0xffff98d833696000: priority 0, rx e_anchor 0xf000000e, tx e_anchor 0xf0000010
+            mask: metadata_reg_c_0: 0xffff0000, source_sqn: 0xffffff
+            rule 0xffff98cc30ab7420
+               match: (TX STE, icm_idx 0xf0000011): metadata_reg_c_0: 0x00020000 
+                      (TX STE, icm_idx 0xf000007b): source_qp: 0x002324 
+               action: VPORT, num 0xffff
+            rule 0xffff98cc30ab75a0
+               match: (TX STE, icm_idx 0xf0000011): metadata_reg_c_0: 0x00020000 
+                      (TX STE, icm_idx 0xf000004a): source_qp: 0x002329 
+               action: VPORT, num 0xffff
+...
