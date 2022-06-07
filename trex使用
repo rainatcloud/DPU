@@ -1,0 +1,64 @@
+
+#安装trex
+wget --no-check-certificate https://trex-tgn.cisco.com/trex/release/latest -O /tmp/trex_latest
+mkdir /usr/trex
+tar -xvf /tmp/trex_latest -C /usr/trex
+
+#预制条件，配置
+sysctl -w vm.nr_hugepages=512
+
+#如果没装pyyaml
+yum install python3-pyyaml
+ 
+
+#配置trex
+#TRex需要配置文件，缺省路径是 /etc/trex_cfg.yaml
+
+#执行如下生成这个文件，-c后面跟着网卡的pcie地址，必须两个不同，不能是同样的pcie，对端mac倒是可以两个相同
+#这个格式：python /usr/trex/v<VERSION_NUMBER>/dpdk_setup_ports.py -c <INTEFACE1> <INTERFACE2> --dest-macs <DEST_INTRRFACE1_MAC> <DEST_INTERFACE2_MAC> --force-macs -o /etc/trex_cfg.yaml
+
+python3 /usr/trex/v2.98/dpdk_setup_ports.py -c af:00.0 af:00.1 --dest-macs 0c:c4:7a:ff:22:95 0c:c4:7a:ff:22:95 --force-macs -o /etc/trex_cfg.yaml
+
++----+------+---------+-------------------+---------------------------------+-----------+---------------+----------+
+| ID | NUMA |   PCI   |        MAC        |              Name               |  Driver   |   Linux IF    |  Active  |
++====+======+=========+===================+=================================+===========+===============+==========+
+| 0  | 0    | 18:00.0 | ac:1f:6b:47:dd:d6 | I350 Gigabit Network Connection | igb       | eno1          | *Active* |
++----+------+---------+-------------------+---------------------------------+-----------+---------------+----------+
+| 1  | 0    | 18:00.1 | ac:1f:6b:47:dd:d7 | I350 Gigabit Network Connection | igb       | eno2          |          |
++----+------+---------+-------------------+---------------------------------+-----------+---------------+----------+
+| 2  | 1    | af:00.0 | 0c:42:a1:c4:50:f8 | MT2892 Family [ConnectX-6 Dx]   | mlx5_core | enp175s0f0np0 |          |
++----+------+---------+-------------------+---------------------------------+-----------+---------------+----------+
+| 3  | 1    | af:00.1 | 0c:42:a1:c4:50:f8 | MT2892 Family [ConnectX-6 Dx]   | mlx5_core | enp175s0f1np1 |          |
++----+------+---------+-------------------+---------------------------------+-----------+---------------+----------+
+Saved to /etc/trex_cfg.yaml.
+
+
+#server，可以不用
+cd /usr/trex/v2.98/
+sudo ./t-rex-64 -c <NUMBER_CORES> -i
+
+#client
+cd /usr/trex/v2.98/
+./trex-console
+
+#尚未验证
+
+#STL files are python modules defining streams using Scapy. Predefined TRex STL packages can be found in: `/usr/trex/v<VERSION_NUMBER>/stl`.
+#For this example, we will be using `udp_1pkt_tuple_gen.py` which creates a UDP stream.
+
+#Within the TRex console prompt, run the following command to start traffic with a given STL file.
+# Start Traffic
+trex>start -f stl/udp_1pkt_tuple_gen.py -p 0 -m 100%
+
+
+#This will start traffic generating from port 0 using 100% of the line rate.
+#To stop traffic generating do:
+
+trex>stop
+
+#For more information you can open the TUI view:
+#From the TUI prompt, you can start and stop traffic as well.
+
+#TUI View
+
+trex>tui
