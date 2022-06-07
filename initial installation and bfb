@@ -56,6 +56,6 @@ ssh 192.168.100.2
 #输入账号密码即可在卡里操作
 
 
+如果卡里系统卡死了，希望不影响主机的情况下重启卡，执行以下命令：
+echo "SW_RESET 1" > /dev/rshim0/misc
 
-
-cat /dev/rshim0/boot
