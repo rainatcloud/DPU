@@ -1,0 +1,10 @@
+
+#查看smmu配置，会影响时延
+bfcfg -d | grep ENABLE_SMMU
+
+#可以在UEFI启动界面打开或关闭
+
+#linux内核的优化工具
+tuned-adm profile latency-performance
+
+#profile内容在这里面可以看：/usr/lib/tuned/latency-performance/tuned.conf
