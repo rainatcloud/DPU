@@ -1,0 +1,30 @@
+
+在virtio规范中有两个参数一起为virtio-blk定义了一个IO请求可以发送的最大大小
+Seg_max: max length of the descriptors list (即 SGL).
+Size_max: max size of each element in list.
+ 
+NVIDIA的BF2 DPU对seg_max/size_max的值没有严格的最大值限制，但是我们确实给每个请求分配了一个staging buffer （allocate a staging buffer per request）
+即：(size_max * seg_max) * queue_depth * num_queues * num_controller`不能超过ARM上的可用内存大小。
+
+其中：
+num_queues 缺省为64
+queue_depth缺省为128
+size_max缺省为4096
+size_max缺省为1
+
+但一定注意num_queues要尽量设为小于Num_msix
+ 
+seg_max 8 and size_max 32768 should work and reach full bandwidth.
+
+
+原理：
+
+size_max controls the maximal length of a single list entry, while seg_max controls the list length.
+By default, SNAP is optimized for 4k blocks: it is better to use a single list element of size 4K over, say, 8 elements of size 512.
+As block sizes get larger, this assumption might not be correct anymore. For example, 8 elements of size 128K might be better than single element of size 1M.
+Now one can correctly ask: what if we only allow single list element of size 4k, but use 1M blocks on host? This forces the kernel to split IO requests, 
+and it surely is the worst option.
+
+So to summarize: 
+if you wishes to achieve best configuration which suits both large and standard blocks, 
+it should use the "large" configuration, and expect a possible penalty in standard sizes.
