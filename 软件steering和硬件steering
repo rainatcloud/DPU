@@ -1,0 +1,30 @@
+Steering分为FW steering， SW steering，以及HW steering。用来向硬件插入流表，性能依次增强。
+新的连接建立需要创建转发规则来执行相应的处理，在大量新的规则插入和更新的情况下，steering规则也需要频繁的更新。每个业务里面包含大量信息，因此也会包含很多的连接，因此每秒规则插入速度是关键处理指标。
+
+1. FW Steering：
+
+基于FW的规则插入，例如SET_FLOW_TABLE_ENTRY需要更多的时间，FW steering的规则插入速率在每秒1w条左右，主要的瓶颈在于：
+1). 对于每个FTE的重复操作，如资源分配
+2). 从入口到真正到达执行操作的irisc处理器的延迟，即每个指令执行的代价(在固件侧是对每个命令调度irisc带来的延迟，在主机侧是通过驱动传递命令的延迟)
+3). 从FTE级到STE级的转换产生的代价
+
+因此主要是要消除这些瓶颈，让做规则插入决定的部件直接插入规则，如SW steering。
+
+2. SW Steering
+SW steering主要是通过如下方式给SW权限，让SW直接操作一些硬件和固件定义的结构组件来加速流插入处理：
+1) 允许SW来给steering table和其他的组件分配内存（比如用来修改包头）
+2) 允许来生成steering table并通过CREATE_FLOW_TABLE命令在指定的root entry注册
+3）让需要创建steering table entries的Sw可以访问所有需要的部件、动作、接口：
+    Existing Flow Tables
+    TIRs
+    drop actions
+    allow actions
+    loopbacks
+    uplink等等
+4）让SW可以通过RDMA QP来填充这些tables
+
+
+硬件steering是利用硬件的steering entry，即STE. 固件可以分配并配置STE。
+STE是64B的基于ICM的context（RO for HW, RW for FW). 
+因此固件可以管理steering的hash table，里面每一个entry都是STE，也可以将多个不同STE连起来，因此组成一个有多个STE构成的一个大的决策树。
+
