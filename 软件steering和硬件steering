@@ -13,15 +13,64 @@ Steering分为FW steering， SW steering，以及HW steering。用来向硬件�
 2. SW Steering
 SW steering主要是通过如下方式给SW权限，让SW直接操作一些硬件和固件定义的结构组件来加速流插入处理：
 1) 允许SW来给steering table和其他的组件分配内存（比如用来修改包头）
+SW可以通过CREATE_GENERAL_OBJ命令为steering创建SW ICM类型的内存，SW告诉固件在哪个address（由于固件所限，要在特定区域创建）创建多大的内存。
+SW负责维护这部分内存的分配以及如何分配，SW为steering分配内存来做这两件事：a)给在Flow table中用的STE分配, b)用来修改包头
+固件需要特定的区域来分配内存（steering_sw_icm_start_address, log_steering_sw_icm_size, header_modify_sw_icm_start_address, log_header_modify_sw_icm_size）并限定分配的粒度为and granularity (log_sw_icm_alloc_granularity)
+这个粒度是固件分配内存的资源单元（element size of resource unites）的大小。
+固件通过判断所在区域属于哪个内存地址来了解SW需要分配哪种资源，是STE还是修改包头的内存。
+内存分配是SW steering负责优化，以避免一个一个分配资源单元消耗大量的时间。
+
 2) 允许来生成steering table并通过CREATE_FLOW_TABLE命令在指定的root entry注册
-3）让需要创建steering table entries的Sw可以访问所有需要的部件、动作、接口：
-    Existing Flow Tables
+SW使用在内存中创建flow table并通过sw_owner field来指定这个table是SW所使用。Flow table在内存中的这个地址也被标识为root STE
+新的设计将E-Switch中的FDB table开放给SW，SW可以在FDB创建Flow table并将Flow table在FDB流内部关联。Flow table需要两个地址，分别给rx和tx用。流表中的entry都是STE，需要SW来填充。 
+但是在固件内部依然使用res_num值而非SW给的这个address。
+
+SW table必须能跳转到其他table，可以是另一个SW table或者fw table，在FTE层面是通过table id来关联。
+SW table必须把table id信息放在创建好的STE里，固件将任何rx和tx的flow table根地址暴露给SW，SW通过QUERY_FLOW_TABLE来查询。
+为了前向兼容，CREATE_FLOW_TABLE也返回NIC的rx或tx table的一个地址。
+
+3）让需要创建steering table entries的Sw可以访问所有需要的部件、动作、接口
+  为了让SW可以创建流表，固件需要额外暴露信息给SW：
     TIRs
     drop actions
     allow actions
     loopbacks
     uplink等等
+    
+    其中NIC steering，SW来构建STE需要的：
+      a)网卡流表能力：
+        nic_rx_action_drop_address
+        nic_tx_action_drop_icm_address
+        nic_tx_action_allow_icm_address
+      b)CREATE_TIR返回可以指向（hit)TIR的地址
+    e-Switch steering，FDB table会开发更多信息：
+      a)flow table的e-switch能力
+          sw_steering_fdb_action_drop_icm_address_rx
+          sw_steering_fdb_action_drop_icm_address_tx
+          sw_steering_uplink_icm_address_rx - not supported now, returns 0, can be used for hairpin functionality in future
+          sw_steering_uplink_icm_address_tx - to send packets to wire
+      b) ESW_VPORT_CONTEXT
+          sw_steering_vport_icm_address_rx - to hit corresponding vport in rx flow
+          sw_steering_vport_icm_address_tx - to make loopback to another vport in switch in tx flow
+
+    steering同步的问题，需要这两个动作：只要有SW的table存在，周期性检查isr_sw_steering_update_invalidation；SW调用SYNC_STEERING执行rx flush的流程
+    
 4）让SW可以通过RDMA QP来填充这些tables
+SW利用RDMA QP来执行更新flow table的内存操作。但如果ROCE在固件被disable了的情况下所有的RDMA会通过NIC的Rx表走到SW侧分发。
+因此这种情况下SW会enable RoCE并通知RDMA Rx table只处理特定的QP，采用新的RDMA rx表的miss action，这种新的miss action是未击中规则的报文需要重新走NIC Rx
+
+
+3. 硬件steering
+SW steering通过RDMA把steering entry直接写到ICM，但是这依然有些问题
+1）直接访问ICM，就没有了抽象层，一旦硬件修改了steering entry的格式，就会出问题
+2）RDMA依然会有 entails additional latency (due to loopback)
+TBD
+2.3. HW steering update
+ConnectX6Dx takes a two fold scalable approach:
+
+Simplify the SW / HW interface
+Table framework setup via FW
+Table population performed directly by HW
 
 
 硬件steering是利用硬件的steering entry，即STE. 固件可以分配并配置STE。
