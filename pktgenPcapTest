@@ -1,0 +1,45 @@
+
+#tcpreply 发包速率上不去，大概在600kpps就不行了
+tcpreplay -i enp175s0f0np0 -l 10000000 -t vlanonly.pcap
+
+
+#因此测试特定报文，需要通过pktgen或者trex来发包
+#这里记录下pktgen的发包
+
+#首先在安装DPDK
+#dpdk编译的依赖包装上
+ pip-3 install meson
+ pip-3 install ninja
+ pip-3 install pyelftools
+
+#手工创建点大页
+ echo 2048 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+
+#pktgen节点也装上dpdk
+#然后链接
+cd dpdk-stable-21.11.2/
+cd build
+ldconfig
+
+#安装pcap
+dnf config-manager --add-repo /etc/yum.repos.d/CentOS-PowerTools.repo
+dnf config-manager --set-enabled PowerTools
+dnf install epel-release -y
+dnf install libpcap-devel -y
+
+#编译安装pktgen
+wget http://git.dpdk.org/apps/pktgen-dpdk/snapshot/pktgen-dpdk-pktgen-21.11.0.tar.gz
+tar xvf pktgen-dpdk-pktgen-21.11.0.tar.gz
+cd pktgen-dpdk-pktgen-21.11.0/
+export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+meson build
+cd build
+ninja
+
+#运行pktgen，注意绑定的核必须和网卡在一个numa
+#-m指定哪个核对应处理哪个端口的收发
+#-s指定输入的pcap文件，冒号前面跟着端口id
+
+ ./app/pktgen -l 16-19 -a af:00.0 -- -m "[17].0" -s 0:/root/vlanonly.pcap
+ 
+ 
