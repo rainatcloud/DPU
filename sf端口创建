@@ -1,4 +1,27 @@
 
+#在upstream内核subfunction是利用devlink port interface管理的，在开源内核上，需要内核版本5.13以上才可以支持。
+#详细可参见
+# https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/networking/devlink/devlink-port.rst?h=v5.13#n125
+# https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/networking/device_drivers/ethernet/mellanox/mlx5.rst?h=v5.12-rc3#n186
+
+#直到ofed5.3，SF都是基于mdev实现，在ofed5.4之后基于auxiliary bus实现，因此sf接口可以通过mlxdevm/devlink来创建、配置和修改
+#从定义上讲，SF是可以与VF共存的，实际操作上一般不会同时打开
+
+#SF的特性
+  *是PF的pci下面部署的轻量级的function，同时具备自身的资源（txq，rxq，cq，eq），这些资源并非与PF的资源共享。
+  *有专用的PCI Bar空间窗口（dedicated windown in PCI bar space），不与PF或其他SF共享
+  *SF与PF或其他的SF共享PCI级别的资源，如MSI-X IRQ
+  
+#sf的优势和限制
+  *需求linux内核5.13以上
+  *当前只能在switchdev模式下使用
+  *无需在BIOS和设备上打开SRIoV功能
+
+#为啥用SF，vs. VF
+  *可以一个一个创建，无需一下都创建好
+  *SF无需实现完整的PCI配置空间，reset和寄存器，因此相对轻量
+  *SF与PF和其他SF共享MSI-X vectors，因此降低了在硬件的中断控制器的总vector需求，简单理解，就是共享中断因此无需额外配置中断数量
+  
 # 创建bond之后，SF端口都会丢失，需要重建SF端口
 # 尤其是对于存储，需要单独创建SF接口来作为对存储后端通信的网口
 
