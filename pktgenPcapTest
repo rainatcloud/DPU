@@ -36,6 +36,14 @@ meson build
 cd build
 ninja
 
+#如果pktgen编译显示找不到libdpdk的库，可以尝试如下：
+vi /etc/ld.so.conf.d/pktgen.conf
+   	/usr/local/lib64
+   	/root/dpdk-stable-21.11.2/build/lib
+
+export PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+ldconfig
+
 #运行pktgen，注意绑定的核必须和网卡在一个numa
 #-m指定哪个核对应处理哪个端口的收发
 #-s指定输入的pcap文件，冒号前面跟着端口id
