@@ -1,0 +1,76 @@
+
+##AMD测试最佳实践，基于年初测试验证：
+
+##BIOS配置：
+•	Determinism Control = Manual
+•	Determinism Slider = Performance (默认设置)
+•	APBDIS=1
+•	Fixed SOC Pstate=P0
+•	IOMMU=Enabled
+•	Preferred IO=Bus
+•	Preferred IO Bus=43 (lspci -vvv | grep -I Eth to check the bus id of BF2)
+
+##其他配置和性能相关的问题：
+•	L3 Cache As NUMA Domain
+L3 Cache As NUMA Domain的关闭与否对dpdk-testpmd测试结果没有影响；但是对iperf3测试结果有显著影响。通过工具分析，发现开启此BIOS选项的情况下，L3 cache access会比较集中在CCD2 及BF2 最邻近的NUMA node, 另外系统内存带宽也会有些许降低。L3 Cache As NUMA Domain默认是关闭的，一般只在部署场景通过开启更多NUMA节点性能收益的情况才开启此BIOS选项。
+
+•	OS内核版本
+Kernel 5.10对virtio方面可能有更多优化。Kernel 4.19部分testpmd数据要补测一下。
+
+•	内核启动项:
+default_hugepagesz=1G hugepagesz=1G hugepages=16 intel_iommu=on iommu=pt pci=realloc
+
+
+##附iperf测试脚本
+
+[root@epyc-powerleader iperf3_servers]# cat new_start_servers.sh
+#!/bin/bash
+
+port=25001
+cpu_id=24
+total=16
+
+#mkdir -p logs
+#/bin/rm -f logs/*
+
+for((i=0;i<total;i++));do
+    #id=$(echo $i | awk -v i=$i '{ printf("%02d\n", i); }')
+    #logfile="./logs/iperf3_server_${id}.log"
+    echo port=$port cpu=$cpu_id
+    #taskset -c $cpu_id iperf3 -D -s -p $port --logfile=$logfile
+    #iperf3 --server --bind=192.168.4.72 --port=$port &
+    numactl --physcpubind=$cpu_id iperf3 --server --bind=192.168.4.72 --port=$port &
+    #taskset -c $cpu_id iperf --server --bind=192.168.1.72 --port=$port | sudo tee iperf2_$port.result > /dev/null &
+    ((cpu_id++))
+    ((port++))
+
+done
+[root@epyc-powerleader iperf3_servers]#
+
+[root@epyc-powerleader iperf3_clients]# cat new_start_clients.sh
+#!/bin/bash
+
+port=25001
+cpu_id=24
+total=16
+server_ip=192.168.4.72
+#time=60
+
+#mkdir -p logs
+#/bin/rm -f logs/*
+
+for((i=0;i<total;i++));do
+    #id=$(echo $i | awk -v i=$i '{ printf("%02d\n", i); }')
+    #logfile="./logs/iperf3_client_${id}.log"
+    echo port=$port cpu=$cpu_id
+    #taskset -c $cpu_id iperf3 -c $server_ip -p $port -t $time > $logfile &
+    #numactl --physcpubind=$cpu_id iperf3 --client 192.168.1.10 --bind 192.168.1.11 --window=400K --len=128K --port=$port -i 1 -t 30 -Z | sudo tee iperf3_$port.result > /dev/null &
+    numactl -m 0 --physcpubind=$cpu_id iperf3 --client 192.168.4.56 --bind 192.168.4.72 --port=$port -i 1 -t 30 -Z | sudo tee iperf3_$port.result > /dev/null &
+    #numactl -m 0 --physcpubind=$cpu_id iperf3 --client 192.168.4.56 --bind 192.168.4.72 --window=400K --len=8192 --port=$port -i 1 -t 30 -Z | sudo tee iperf3_$port.result > /dev/null &
+    #iperf3 --client 192.168.4.56 --bind 192.168.4.72 --port=$port -i 1 -t 30 -Z | sudo tee iperf3_$port.result > /dev/null &
+    ((cpu_id++))
+    ((port++))
+done
+wait
+./nn_prt_num.sh
+[root@epyc-powerleader iperf3_clients]#
