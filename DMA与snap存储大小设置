@@ -28,3 +28,6 @@ and it surely is the worst option.
 So to summarize: 
 if you wishes to achieve best configuration which suits both large and standard blocks, 
 it should use the "large" configuration, and expect a possible penalty in standard sizes.
+
+##doca 1.5版本支持了通过spdk读取spdk bdev的内存占用情况
+spdk_rpc.py env_dpdk_get_mem_stats
