@@ -48,3 +48,8 @@ snap_rpc.py emulation_functions_list
 modprobe virtio_blk
 modprobe virtio_pci
 
+#对静态virtio blk设备，可以配置如下默认的启动选项，适用于VIRTIO_BLK_EMULATION_NUM_PF=1的场景
+[root@localhost mlnx_snap]# cat snap_rpc_init_bf2.conf
+controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev Null0 --pf_id 0
+[root@localhost mlnx_snap]# cat spdk_rpc_init.conf
+bdev_null_create Null0 1024 512
