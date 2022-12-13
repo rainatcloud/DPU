@@ -1,5 +1,14 @@
 #编译方法步骤：
 
+预先检查：
+如果没有安装，安装新版Docker
+yum install yum-utils
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install docker-ce
+systemctl enable docker
+systemctl start docker
+
+
 1.	解压zip包，确认包含内核更新的更新脚本已经在zip包内，否则需要额外解压到当前目录覆盖bclinux/7.6目录下的文件
 2.	cd bfb-build
 3.	需要先使用一个license运行：# echo 'weNH50IllblhwQGq9SaEGW5FtijaYlI_PamZWLDBx06lmiGW_q_yzE7Pm81bs9paIB1949SnccBJjurozZ1TF4vEoMdsYcUabb-wPQQtKsRYWPUQ-itaFaBGcM6URaqdv_rPcg2BoVhGKAvtQVXIFU8WZd2jP4hnn_s9KDhGF-k=' > bclinux/7.6/license 
