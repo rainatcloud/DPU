@@ -52,6 +52,7 @@ git clone https://github.com/Mellanox/qemu -b mlx_vfe_vdpa
 cd qemu
 mkdir bin
 cd bin
+#如果报错找不到pixman-1，yum install pixman-devel安装一下
 ../configure --target-list=x86_64-softmmu --enable-kvm --cc=/usr/local/bin/gcc --cxx=/usr/local/bin/g++
 make -j24
 
@@ -83,18 +84,25 @@ snap_rpc.py emulation_functions_list
 
 #运行VFE vDPA
 cd dpdk-vhost-vfe
-./build/app/dpdk-vfe-vdpa -a 0000:00:00.0 --log-level=.,8 --vfio-vftoken=cdc786f0-59d4-41d9-b554-fed36ff5e89f -- --client
+./build/app/dpdk-vfe-vdpa -a 0000:00:00.0 --log-level=.,8 --vfio-vf-token=cdc786f0-59d4-41d9-b554-fed36ff5e89f -- --client
 #另起一个ssh
 #网络
 cd dpdk-vhost-vfe
 python ./app/vfe-vdpa/vhostmgmt mgmtpf -a 0000:af:00.2
-# on bf2, change VF mac address
+#在DPU上，用如下命令修改VF的mac地址
 virtnet modify -p 0 -v 0 device -m 00:00:00:00:33:00
+#回到host，执行如下命令，创建vDPA VF设备的vhost socket，用于虚机连接
 python ./app/vfe-vdpa/vhostmgmt vf -a 0000:af:04.5 -v /tmp/vfe-net0
 
 #存储
 cd dpdk-vhost-vfe
 python ./app/vfe-vdpa/vhostmgmt mgmtpf -a 0000:af:00.3
-# on bf2, create VF device
-snap_rpc.py controller_virtio_blk_create mlx5_0 --pf_id 0 --vf_id 0 --bdev_type spdk --bdev Null0
-python ./app/vfe-vdpa/vhostmgmt vf -a 0000:af:05.1 -v /tmp/vfe-blk0
+#在DPU上，创建VF对应的存储设备
+#我们用个malloc设备
+spdk_rpc.py bdev_malloc_create 128 512
+snap_rpc.py controller_virtio_blk_create mlx5_0 --pf_id 0 --vf_id 0 --bdev_type spdk --bdev Malloc0
+#回到host上，创建vDPA blk的VF设备的vhost socket，用于虚机连接使用
+python ./app/vfe-vdpa/vhostmgmt vf -a 0000:af:06.5 -v /tmp/vfe-blk0
+
+#上传镜像和xml就可以创建虚机了
+virsh create vm.xml
