@@ -1,0 +1,100 @@
+
+#可以通过mlxfwmanager确认固件版本 > 24.35.1000 （2022年十月份LTS版的BFB）
+#主机测需要需要支持vfio sriov （主机Linxu操作系统内核版本>5.7，或OpenEuler 4.19版内核加载了backport支持)，即一下步骤可以成功
+modprobe -v vfio vfio_pci
+echo 1 > /sys/module/vfio_pci/parameters/enable_sriov
+
+#如果是OpenEuler 20.03的4.19内核，可以通过如下方式下载具备vfio sriov支持的内核代码（注：BC上编译有冲突，需要BC操作系统解决)，然后编译
+git clone https://gitee.com/openeuler/kernel.git
+cd kernel 
+git fetch https://gitee.com/openeuler/kernel.git pull/258/head:pr_258
+
+#进入DPU卡上#注意之前固件配置尽量重置一下，或至少保证PCI_SWITCH是关的 PCI_SWITCH_EMULATION_NUM_PORT=0，PCI_SWITCH_EMULATION_ENABLE=0
+mlxconfig -d /dev/mst/mt41686_pciconf0 r
+#冷重启，确保固件配置修改生效
+#做如下固件配置
+mlxconfig -d /dev/mst/mt41686_pciconf0 s \
+  VIRTIO_NET_EMULATION_ENABLE=1 VIRTIO_NET_EMULATION_NUM_PF=1 VIRTIO_NET_EMULATION_NUM_VF=16 \
+  VIRTIO_BLK_EMULATION_ENABLE=1 VIRTIO_BLK_EMULATION_NUM_PF=1 VIRTIO_BLK_EMULATION_NUM_VF=16 \
+  VIRTIO_NET_EMULATION_NUM_MSIX=64 VIRTIO_BLK_EMULATION_NUM_MSIX=64 NUM_VF_MSIX=64
+
+#修改如下2个文件，挂个空盘做virtio_blk的演示，实际使用可以根据挂盘的需要修改
+cat /etc/mlnx_snap/snap_rpc_init_bf2.conf
+  controller_virtio_blk_create mlx5_0 --bdev_type spdk --bdev Null0 --pf_id 0 --num_queues 1 --admin_q
+cat /etc/mlnx_snap/spdk_rpc_init.conf
+  bdev_null_create Null0 1024 512
+#冷重启确保固件配置生效，注意最好确保有oob口的连接，这样如果万一snap没有启动起来主机卡死，可以登到卡里修改配置
+
+#把虚机拉起的工作，卡里设置不多，后面主要是host侧了
+
+#下载编译dpdk-vdpa驱动
+git clone https://github.com/Mellanox/dpdk-vhost-vfe
+yum install -y numactl-devel libev-devel
+cd dpdk-vhost-vfe/
+#如果没有，需要安装编译需要的包
+yum install python3-pyelftools meson
+#编译vdpa驱动
+meson build -Dexamples=vdpa
+ninja -C build
+
+#目前必须要安装特定版本的qemu，提前还要安装gcc7.4
+#gcc安装
+wget http://ftp.gnu.org/gnu/gcc/gcc-7.4.0/gcc-7.4.0.tar.gz
+tar xvf gcc-7.4.0.tar.gz
+cd gcc-7.4.0
+./contrib/download_prerequisites
+./configure --enable-checking=release --enable-languages=c,c++ --disable-multilib
+make -j24
+make install
+
+# qemu下载和编译代码如下
+git clone https://github.com/Mellanox/qemu -b mlx_vfe_vdpa
+cd qemu
+mkdir bin
+cd bin
+../configure --target-list=x86_64-softmmu --enable-kvm --cc=/usr/local/bin/gcc --cxx=/usr/local/bin/g++
+make -j24
+
+#正式开始配置vdpa
+#加载vfio模块
+modprobe vfio vfio_pci
+#打开vfio sriov支持
+echo 1 > /sys/module/vfio_pci/parameters/enable_sriov
+#将网卡模拟的virtio设备的设备id加入到vfio-pci的支持中，这个设备id可以通过lspci -nn | grep -i virtio查看，确保是下面这俩值
+echo 0x1af4 0x1041 > /sys/bus/pci/drivers/vfio-pci/new_id
+echo 0x1af4 0x1042 > /sys/bus/pci/drivers/vfio-pci/new_id
+#通过如下命令将lspci-nn | grep-i virtio看到的网络和存储的pcie号bind到vfio驱动
+echo 0000:af:00.2 > /sys/bus/pci/drivers/vfio-pci/bind
+echo 0000:af:00.3 > /sys/bus/pci/drivers/vfio-pci/bind
+#检查一下，设备是不是都已经绑到了vfio-pci的驱动
+lspci -vvv -s 0000:af:00.3 | grep "Kernel driver"
+  Kernel driver in use: vfio-pci
+lspci -vvv -s 0000:af:00.2 | grep "Kernel driver"
+  Kernel driver in use: vfio-pci
+
+#对存储和网络各创建一个VF设备，下面的pcie号码注意根据之前给的命令把自己机器的virtio设备的pcie号替换
+echo 1 > /sys/bus/pci/devices/0000:af:00.2/sriov_numvfs
+echo 1 > /sys/bus/pci/devices/0000:af:00.3/sriov_numvfs
+
+#在dpu里执行如下命令，验证基于sf生成的网络SF VF的设备号
+virtnet query -p 0 -v 0 | grep sf_rep_net_device
+#存储侧还是可以用这个命令看vf的pcie和主机侧的一致
+snap_rpc.py emulation_functions_list
+
+#运行VFE vDPA
+cd dpdk-vhost-vfe
+./build/app/dpdk-vfe-vdpa -a 0000:00:00.0 --log-level=.,8 --vfio-vftoken=cdc786f0-59d4-41d9-b554-fed36ff5e89f -- --client
+#另起一个ssh
+#网络
+cd dpdk-vhost-vfe
+python ./app/vfe-vdpa/vhostmgmt mgmtpf -a 0000:af:00.2
+# on bf2, change VF mac address
+virtnet modify -p 0 -v 0 device -m 00:00:00:00:33:00
+python ./app/vfe-vdpa/vhostmgmt vf -a 0000:af:04.5 -v /tmp/vfe-net0
+
+#存储
+cd dpdk-vhost-vfe
+python ./app/vfe-vdpa/vhostmgmt mgmtpf -a 0000:af:00.3
+# on bf2, create VF device
+snap_rpc.py controller_virtio_blk_create mlx5_0 --pf_id 0 --vf_id 0 --bdev_type spdk --bdev Null0
+python ./app/vfe-vdpa/vhostmgmt vf -a 0000:af:05.1 -v /tmp/vfe-blk0
