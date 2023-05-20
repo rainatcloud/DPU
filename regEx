@@ -1,0 +1,12 @@
+
+#看下版本
+$ cat /etc/mlnx-release
+DOCA_1.9.5_BSP_4.0.bu1_Ubuntu_22.04-25.20230119.signed
+
+# The rules compile using the RXP compiler: 
+$ rxpc -f dpi_rules-1.1_new -V6.0 -o dpi -F -S -s -p 0.000001
+
+#The compiled rule file is dpi.rof2.binary and we will use this to run rxpbench:
+$ sudo rxpbench --dpdk-eal "-l4,5,6,7 -n 1 -a 03:00.0,class=net:regex" -d rxp -m pcap_file -b 100000000 -f dpi\data.pcap -r dpi.rof2.binary -n 10000 -l 2048 -c 1
+
+
