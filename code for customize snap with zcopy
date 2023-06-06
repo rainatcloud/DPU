@@ -1,0 +1,24 @@
+
+spdk的相关commit如下，主要是再nvmf中增加了对ext_opts的支持
+https://review.spdk.io/gerrit/c/spdk/spdk/+/6271/38/module/bdev/nvme/bdev_nvme.c#3308
+
+因此如果需要做zcopy，并且实现自己的逻辑，需要看是否可以重用spdk中的nvme bdev的代码，或者参考这部分的代码，在自己实现的bdev中加入对应的ext_opts赋值
+
+-- 需要看整个ext_opts指针是如何赋值的，对应的这个callback函数？
+-- spdk_bdev_io_from_ctx（）
+
+-- 然后如何发送给rdma的代码发送出去
+
+
+此外，因为数据面内存在host侧，因此如果需要对数据做处理，必须offload。例如做crc的话，需要引入crc offload的逻辑
+CRC offload的example code参见：
+https://github.com/Mellanox/hw_offload_api_examples/tree/master
+
+需要考虑将对应signiture offload的代码逻辑增加到spdk的rdma传输部分（spdk/lib/rdma/rdma_mlx5_dv.c)中去。
+
+此外，signiture offload发送之后，如果对端验证失败，即传输中发生了错误，则需要在target端的逻辑应用中验证给代码，并对应做相应的应用侧处理。
+验证代码在spdk中有一个对nvmf的t10-dif的verify实现spdk_dif_verify (在spdk/lib/nvmf/rdma.c中)。
+客户化的target侧逻辑可以参考上面的验证代码，在自己的target侧实现对应的验证crc的代码，以及对应的业务逻辑。
+
+-- 在非zcopy的场景下，spdk里面的rdma注册的内存，是否可以和snap里面从host侧拷贝过来的数据所存放的内存共享同一段？
+
