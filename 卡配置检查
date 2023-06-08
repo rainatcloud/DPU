@@ -14,3 +14,6 @@ bfcfg -d | grep ENABLE_SMMU
 
 # 如果lspci的DPU硬件不识别为bf，执行如下命令
 update-pciids
+
+# 查询卡的SN和Rev信息 
+mlxvpd -d 03:00.0
