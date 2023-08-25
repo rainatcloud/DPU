@@ -38,7 +38,7 @@ pci/0000:03:00.1/262144: type eth netdev pf1hpf flavour pcipf pfnum 1
 auxiliary/mlx5_core.sf.2/1310720: type eth netdev enp3s0f0s0 flavour physical port 0
 
 
-# 创建一个88的sf端口，mlxdevm在这个路径
+# 创建一个88的sf端口，mlxdevm在这个路径（如果创建到BF的host上可以加上controller 1参数)
 
 mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88
 
