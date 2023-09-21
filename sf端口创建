@@ -25,9 +25,38 @@
 # 创建bond之后，SF端口都会丢失，需要重建SF端口
 # 尤其是对于存储，需要单独创建SF接口来作为对存储后端通信的网口
 
-# 先看一下当前的端口情况
+# DPU卡里配置固件参数
+mlxconfig -d /dev/mst/mt41686_pciconf0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 \
+PCI_SWITCH_EMULATION_ENABLE=1 \
+PCI_SWITCH_EMULATION_NUM_PORT=16 \
+VIRTIO_NET_EMULATION_ENABLE=1 \
+VIRTIO_NET_EMULATION_NUM_VF=0 \
+VIRTIO_NET_EMULATION_NUM_PF=0 \
+VIRTIO_NET_EMULATION_NUM_MSIX=64 \
+ECPF_ESWITCH_MANAGER=1 \
+ECPF_PAGE_SUPPLIER=1 \
+SRIOV_EN=0 \
+PF_SF_BAR_SIZE=10 \
+PF_TOTAL_SF=2 \
+PF_NUM_PF_MSIX=64 \
+PF_BAR2_ENABLE=0 \
+PER_PF_NUM_SF=1
 
-devlink port show
+
+##如果在DPU的host上创建SF端口，还要在host上执行：
+mlxconfig -d 0000:05:00.0 s PF_TOTAL_SF=250 PF_NUM_PF_MSIX=1000 PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_SF_BAR_SIZE=10 SRIOV_EN=0
+# 还要确认host侧的OFED驱动安装好，有/opt/mellanox/iproute2路径
+
+#########配置好固件参数后，冷重启服务器#####################################
+
+###########################
+######然后以下步骤在卡里执行#####
+###########################
+# 添加一下路径
+PATH=$PATH:/opt/mellanox/iproute2/sbin/
+
+# 先看一下当前的端口情况
+mlxdevm port show
 
 # 可见有physical的端口0和1，还有其代表口，有一个系统创建好的sf
 
@@ -39,27 +68,23 @@ auxiliary/mlx5_core.sf.2/1310720: type eth netdev enp3s0f0s0 flavour physical po
 
 
 # 创建一个88的sf端口，mlxdevm在这个路径（如果创建到BF的host上可以加上controller 1参数)
-
 mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88
 
-# 添加一下路径
+#使用mlxdevm port show再查看一下端口
+  function:
+    hw_addr 00:00:00:00:00:00 state active opstate attached roce false max_uc_macs 1 trust off
+pci/0000:03:00.0/294912: type eth netdev en3f0c1pf0sf88 flavour pcisf controller 1 pfnum 0 sfnum 88
 
-PATH=$PATH:/opt/mellanox/iproute2/sbin/
+# 把状态拉起来，（注意：使用DPU方式创建SF的时候：在DPU上执行这个命令之前，host上是看不见端口的）
+mlxdevm port function set pci/0000:03:00.0/294912 state active
 
 # 可以选择设置trust模式
-
-mlxdevm port function set pci/0000:03:00.0/229377 trust on
-
-# 把状态拉起来
-
-mlxdevm port function set pci/0000:03:00.0/229377 state active
+mlxdevm port function set pci/0000:03:00.0/294912 trust on
 
 # 设一下Mac地址
-
 mlxdevm port function set pci/0000:03:00.0/229377 hw_addr 00:00:00:00:88:88
 
 # 看一下端口
-
 mlxdevm port show en3f0pf0sf88
 
 执行结果：
@@ -68,9 +93,33 @@ pci/0000:03:00.0/229377: type eth netdev en3f0pf0sf88 flavour pcisf controller 0
     hw_addr 00:00:00:00:88:88 state active opstate detached roce true max_uc_macs 128 trust on
 
 # 看下详细信息
+# mlxdevm port show en3f0c1pf0sf88 -jp
+{
+    "port": {
+        "pci/0000:03:00.0/294912": {
+            "type": "eth",
+            "netdev": "en3f0c1pf0sf88",
+            "flavour": "pcisf",
+            "controller": 1,
+            "pfnum": 0,
+            "sfnum": 88,
+            "function": {
+                "hw_addr": "02:11:11:22:33:44",
+                "state": "active",
+                "opstate": "attached",
+                "roce": "true",
+                "max_uc_macs": 128,
+                "trust": "on"
+            }
+        }
+    }
+}
 
-mlxdevm port show en3f0pf0sf88 -jp
 
+# 如果state是active，opstate是attached，在DPU主机上应该可以看到设备
+
+########################################################################################
+# 如果看到上述命令opstate是detached，那么还是DPU上只能看见sf的代表口，看如下结果
 执行结果：
 {
     "port": {
@@ -93,8 +142,7 @@ mlxdevm port show en3f0pf0sf88 -jp
     }
 }
 
-# 但是到此为止，还是只能看见sf的代表口
-
+#执行
 ethtool -i en3f0pf0sf88
 
 # 可见结果为rep的代表口驱动
