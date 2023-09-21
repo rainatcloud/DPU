@@ -1,0 +1,73 @@
+
+#use SF interface on BF2 host to enable kernel vdpa
+#HOST上的DPU卡固件配置, 这里最大打开250个SF设备(下面的PCIe地址使用自己服务器上的DPU的PCIe地址替换）
+mlxconfig -d 0000:05:00.0 s PF_TOTAL_SF=250 PF_NUM_PF_MSIX=1000 PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_SF_BAR_SIZE=10 SRIOV_EN=0
+
+#DPU上的固件配置
+mlxconfig -d /dev/mst/mt41686_pciconf0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 \
+PCI_SWITCH_EMULATION_ENABLE=1 \
+PCI_SWITCH_EMULATION_NUM_PORT=16 \
+VIRTIO_NET_EMULATION_ENABLE=1 \
+VIRTIO_NET_EMULATION_NUM_VF=0 \
+VIRTIO_NET_EMULATION_NUM_PF=0 \
+VIRTIO_NET_EMULATION_NUM_MSIX=64 \
+ECPF_ESWITCH_MANAGER=1 \
+ECPF_PAGE_SUPPLIER=1 \
+SRIOV_EN=0 \
+PF_SF_BAR_SIZE=10 \
+PF_TOTAL_SF=2 \
+PF_NUM_PF_MSIX=64
+mlxconfig -d /dev/mst/mt41686_pciconf0.1 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_TOTAL_SF=2 PF_NUM_PF_MSIX=64
+
+#注意要冷重启服务器让固件配置生效
+
+#编译内核，这里用的是5.15内核（需要5.9.6以上的新版内核支持内核vdpa功能，更新版的有多队列支持）
+wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.132.tar.xz
+tar xvf linux-5.15.132.tar.xz
+cd linux-5.15.132/
+
+#拷贝.config文件到当前目录
+cp /boot/config-4.19.90-2107.6.0.0100.oe1.bclinux.x86_64 .config
+#加入如下选项：
+CONFIG_VDPA=m
+CONFIG_VHOST_VDPA=m
+CONFIG_MLX5_VDPA=y
+CONFIG_MLX5_VDPA_NET=m
+
+并确认有如下的选项设置，并且最好所有的_CLS和_ACT的配置都打开：
+CONFIG_NET_SWITCHDEV=y
+CONFIG_MLX5_ESWITCH=y
+
+#编译内核，一路回车
+make -j16 bzImage
+make -j16 modules
+make -j16 modules_install
+make install
+
+#更新grub的缺省内核，重启服务器
+#然后加载vdpa内核模块
+modprobe vdpa
+modprobe vhost-vdpa
+modprobe mlx5_vdpa
+
+#卡里执行这两条命令，生成vdpa设备
+mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88 controller 1
+mlxdevm port function set pci/0000:03:00.0/294912 hw_addr 02:11:11:22:33:44 trust on state active
+
+#host上应该可以看到设备了，这个命令下可以看到有sf设备，如下mlx5_core.sf.4
+# devlink dev show
+pci/0000:05:00.0
+pci/0000:05:00.1
+pci/0000:43:00.0
+pci/0000:43:00.1
+auxiliary/mlx5_core.sf.4
+
+#host上执行命令，加path，vdpa命令在这里
+PATH=$PATH:/opt/mellanox/iproute2/sbin/
+
+##当前找不到#########################待解决
+#vdpa mgmtdev show
+
+# unload sf设备的rdma和eth driver
+echo mlx5_core.rdma.4 > /sys/bus/auxiliary/devices/mlx5_core.sf.4/mlx5_core.rdma.4/driver/unbind
+echo mlx5_core.eth.4 > /sys/bus/auxiliary/devices/mlx5_core.sf.4/mlx5_core.eth.4/driver/unbind
