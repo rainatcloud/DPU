@@ -206,6 +206,81 @@ auxiliary/mlx5_core.sf.2/1310720: type eth netdev enp3s0f0s0 flavour physical po
 auxiliary/mlx5_core.sf.3/1376256: type eth netdev enp3s0f0s88 flavour physical port 0
 
 
+#显示设备和相关协议的关系：
+
+# tree -l -L 3 -P "mlx5_core.sf." /sys/bus/auxiliary/devices/
+/sys/bus/auxiliary/devices/
+├── mlx5_core.eth.0 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.eth.0
+│   ├── driver -> ../../../../../bus/auxiliary/drivers/mlx5_core.eth
+│   │   ├── mlx5_core.eth.0 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.eth.0  [recursive, not followed]
+│   │   ├── mlx5_core.eth.1 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.1/mlx5_core.eth.1
+│   │   ├── mlx5_core.eth.2 -> ../../../../devices/pci0000:40/0000:40:03.0/0000:43:00.0/mlx5_core.eth.2
+│   │   ├── mlx5_core.eth.3 -> ../../../../devices/pci0000:40/0000:40:03.0/0000:43:00.1/mlx5_core.eth.3
+│   │   ├── mlx5_core.eth.4 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4/mlx5_core.eth.4
+│   │   └── module -> ../../../../module/mlx5_core
+│   ├── power
+│   └── subsystem -> ../../../../../bus/auxiliary
+│       ├── devices
+│       └── drivers
+├── mlx5_core.eth.1 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.1/mlx5_core.eth.1  [recursive, not followed]
+├── mlx5_core.eth.2 -> ../../../devices/pci0000:40/0000:40:03.0/0000:43:00.0/mlx5_core.eth.2  [recursive, not followed]
+├── mlx5_core.eth.3 -> ../../../devices/pci0000:40/0000:40:03.0/0000:43:00.1/mlx5_core.eth.3  [recursive, not followed]
+├── mlx5_core.eth.4 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4/mlx5_core.eth.4  [recursive, not followed]
+├── mlx5_core.rdma.0 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.rdma.0
+│   ├── driver -> ../../../../../bus/auxiliary/drivers/mlx5_ib.rdma
+│   │   ├── mlx5_core.rdma.0 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.rdma.0  [recursive, not followed]
+│   │   ├── mlx5_core.rdma.1 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.1/mlx5_core.rdma.1
+│   │   ├── mlx5_core.rdma.2 -> ../../../../devices/pci0000:40/0000:40:03.0/0000:43:00.0/mlx5_core.rdma.2
+│   │   ├── mlx5_core.rdma.3 -> ../../../../devices/pci0000:40/0000:40:03.0/0000:43:00.1/mlx5_core.rdma.3
+│   │   ├── mlx5_core.rdma.4 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4/mlx5_core.rdma.4
+│   │   └── module -> ../../../../module/mlx5_ib
+│   ├── power
+│   └── subsystem -> ../../../../../bus/auxiliary  [recursive, not followed]
+├── mlx5_core.rdma.1 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.1/mlx5_core.rdma.1  [recursive, not followed]
+├── mlx5_core.rdma.2 -> ../../../devices/pci0000:40/0000:40:03.0/0000:43:00.0/mlx5_core.rdma.2  [recursive, not followed]
+├── mlx5_core.rdma.3 -> ../../../devices/pci0000:40/0000:40:03.0/0000:43:00.1/mlx5_core.rdma.3  [recursive, not followed]
+├── mlx5_core.rdma.4 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4/mlx5_core.rdma.4  [recursive, not followed]
+└── mlx5_core.sf.4 -> ../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4
+    ├── driver -> ../../../../../bus/auxiliary/drivers/mlx5_core.sf
+    │   ├── mlx5_core.sf.4 -> ../../../../devices/pci0000:00/0000:00:03.0/0000:05:00.0/mlx5_core.sf.4  [recursive, not followed]
+    │   └── module -> ../../../../module/mlx5_core  [recursive, not followed]
+    ├── infiniband
+    │   └── mlx5_0
+    ├── infiniband_mad
+    │   ├── issm4
+    │   └── umad4
+    ├── infiniband_verbs
+    │   └── uverbs4
+    ├── mlx5_core.eth.4
+    │   ├── driver -> ../../../../../../bus/auxiliary/drivers/mlx5_core.eth  [recursive, not followed]
+    │   ├── power
+    │   └── subsystem -> ../../../../../../bus/auxiliary  [recursive, not followed]
+    ├── mlx5_core.rdma.4
+    │   ├── driver -> ../../../../../../bus/auxiliary/drivers/mlx5_ib.rdma  [recursive, not followed]
+    │   ├── power
+    │   └── subsystem -> ../../../../../../bus/auxiliary  [recursive, not followed]
+    ├── net
+    │   └── enp5s0f0s88
+    ├── power
+    └── subsystem -> ../../../../../bus/auxiliary  [recursive, not followed]
+
+#查看SF的rdma设备名命令
+rdma dev show
+
+返回结果，看mlx5_0是新创建的这个设备
+0: mlx5_4: node_type ca fw 24.38.0368 node_guid 08c0:eb03:003e:8eca sys_image_guid 08c0:eb03:003e:8eca
+1: mlx5_1: node_type ca fw 24.38.0368 node_guid 08c0:eb03:003e:8ecb sys_image_guid 08c0:eb03:003e:8eca
+2: mlx5_2: node_type ca fw 22.35.2000 node_guid 0c42:a103:00fa:18a2 sys_image_guid 0c42:a103:00fa:18a2
+3: mlx5_3: node_type ca fw 22.35.2000 node_guid 0c42:a103:00fa:18a3 sys_image_guid 0c42:a103:00fa:18a2
+4: mlx5_0: node_type ca fw 24.38.0368 node_guid 0211:11ff:fe22:3344 sys_image_guid 08c0:eb03:003e:8eca
+
+#这样看对应关系
+ls /sys/bus/auxiliary/devices/mlx5_core.sf.4/infiniband
+
+#返回结果
+mlx5_0
+
+
 #不用可以这么删了
 mlxdevm port del pci/0000:03:00.0/229377
 
