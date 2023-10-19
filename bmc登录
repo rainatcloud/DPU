@@ -1,0 +1,14 @@
+
+#通过oob接口ipmi直接登录
+#进入arm
+#修改/etc/ipmi/progconf文件，配置本机ip地址：
+
+root@localhost:~# cat /etc/ipmi/progconf 
+  SUPPORT_IPMB="NONE"
+  LOOP_PERIOD=3
+  BF_FAMILY=$(/usr/bin/bffamily | tr -d '[:space:]')
+  OOB_IP="192.168.101.2"
+
+重启ipmi服务
+systemctl restart mlx_ipmid
+
