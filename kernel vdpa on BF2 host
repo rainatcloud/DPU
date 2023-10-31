@@ -1,25 +1,19 @@
 
-#use SF interface on BF2 host to enable kernel vdpa
-#HOST上的DPU卡固件配置, 这里最大打开250个SF设备(下面的PCIe地址使用自己服务器上的DPU的PCIe地址替换）
-mlxconfig -d 0000:05:00.0 s PF_TOTAL_SF=250 PF_NUM_PF_MSIX=1000 PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_SF_BAR_SIZE=10 SRIOV_EN=0
+使用VF创建设备，可以用默认固件配置，无需更改，如果要更多VF，可以通过修改固件参数增加VF数量
+# mlxconfig -d 05:00.0 q  SRIOV_EN NUM_OF_VFS NUM_VF_MSIX
 
-#DPU上的固件配置
-mlxconfig -d /dev/mst/mt41686_pciconf0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 \
-PCI_SWITCH_EMULATION_ENABLE=1 \
-PCI_SWITCH_EMULATION_NUM_PORT=16 \
-VIRTIO_NET_EMULATION_ENABLE=1 \
-VIRTIO_NET_EMULATION_NUM_VF=0 \
-VIRTIO_NET_EMULATION_NUM_PF=0 \
-VIRTIO_NET_EMULATION_NUM_MSIX=64 \
-ECPF_ESWITCH_MANAGER=1 \
-ECPF_PAGE_SUPPLIER=1 \
-SRIOV_EN=0 \
-PF_SF_BAR_SIZE=10 \
-PF_TOTAL_SF=2 \
-PF_NUM_PF_MSIX=64
-mlxconfig -d /dev/mst/mt41686_pciconf0.1 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_TOTAL_SF=2 PF_NUM_PF_MSIX=64
+Device #1:
+----------
 
-#注意要冷重启服务器让固件配置生效
+Device type:    BlueField2
+Name:           MBF2H332A-AENO_Ax_Bx
+Description:    BlueField-2 P-Series DPU 25GbE Dual-Port SFP56; PCIe Gen4 x8; Crypto Disabled; 16GB on-board DDR; 1GbE OOB management; HHHL
+Device:         05:00.0
+
+Configurations:                                      Next Boot
+        SRIOV_EN                                    True(1)
+        NUM_OF_VFS                                  16
+        NUM_VF_MSIX                                 11
 
 #编译内核，这里用的是5.15内核（需要5.9.6以上的新版内核支持内核vdpa功能，更新版的有多队列支持）
 wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.15.132.tar.xz
@@ -49,6 +43,56 @@ make install
 modprobe vdpa
 modprobe vhost-vdpa
 modprobe mlx5_vdpa
+
+#加个路径
+PATH=$PATH:/opt/mellanox/iproute2/sbin/
+
+找到对应的设备
+# vdpa mgmtdev show
+pci/0000:05:00.3:
+  supported_classes net
+  max_supported_vqs 65
+  dev_features CSUM GUEST_CSUM MTU MAC HOST_TSO4 HOST_TSO6 MRG_RXBUF STATUS CTRL_VQ CTRL_VLAN MQ CTRL_MAC_ADDR VERSION_1 ACCESS_PLATFORM
+pci/0000:05:00.4:
+  supported_classes net
+  max_supported_vqs 65
+  dev_features CSUM GUEST_CSUM MTU MAC HOST_TSO4 HOST_TSO6 MRG_RXBUF STATUS CTRL_VQ CTRL_VLAN MQ CTRL_MAC_ADDR VERSION_1 ACCESS_PLATFORM
+
+#添加设备
+#注：如何添加参数，如max_vqs和max_vq_size，待确认
+#vdpa dev add mgmtdev pci/0000:05:00.3 name vdpa0
+
+#看下设备是否已经存在
+# /opt/mellanox/iproute2/sbin/vdpa dev show
+vdpa0: type network mgmtdev pci/0000:05:00.3 vendor_id 5555 max_vqs 3 max_vq_size 256
+
+#看下vhost设备
+# ls /dev/vhost-vdpa-0
+/dev/vhost-vdpa-0
+
+
+#################################使用DPU上的SF创建设备，vDPA找不到相关mgmtdev，因此目前不建议用SF来创建###############################################
+#use SF interface on BF2 host to enable kernel vdpa
+#HOST上的DPU卡固件配置, 这里最大打开250个SF设备(下面的PCIe地址使用自己服务器上的DPU的PCIe地址替换）
+mlxconfig -d 0000:05:00.0 s PF_TOTAL_SF=250 PF_NUM_PF_MSIX=1000 PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_SF_BAR_SIZE=10 SRIOV_EN=0
+
+#DPU上的固件配置
+mlxconfig -d /dev/mst/mt41686_pciconf0 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 \
+PCI_SWITCH_EMULATION_ENABLE=1 \
+PCI_SWITCH_EMULATION_NUM_PORT=16 \
+VIRTIO_NET_EMULATION_ENABLE=1 \
+VIRTIO_NET_EMULATION_NUM_VF=0 \
+VIRTIO_NET_EMULATION_NUM_PF=0 \
+VIRTIO_NET_EMULATION_NUM_MSIX=64 \
+ECPF_ESWITCH_MANAGER=1 \
+ECPF_PAGE_SUPPLIER=1 \
+SRIOV_EN=0 \
+PF_SF_BAR_SIZE=10 \
+PF_TOTAL_SF=2 \
+PF_NUM_PF_MSIX=64
+mlxconfig -d /dev/mst/mt41686_pciconf0.1 s PF_BAR2_ENABLE=0 PER_PF_NUM_SF=1 PF_TOTAL_SF=2 PF_NUM_PF_MSIX=64
+
+#注意要冷重启服务器让固件配置生效
 
 #卡里执行这两条命令，生成vdpa设备
 mlxdevm port add pci/0000:03:00.0 flavour pcisf pfnum 0 sfnum 88 controller 1
