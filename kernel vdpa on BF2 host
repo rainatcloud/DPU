@@ -59,8 +59,9 @@ pci/0000:05:00.4:
   dev_features CSUM GUEST_CSUM MTU MAC HOST_TSO4 HOST_TSO6 MRG_RXBUF STATUS CTRL_VQ CTRL_VLAN MQ CTRL_MAC_ADDR VERSION_1 ACCESS_PLATFORM
 
 #添加设备
-#注：如何添加参数，如max_vqs和max_vq_size，待确认
-#vdpa dev add mgmtdev pci/0000:05:00.3 name vdpa0
+#可以通过max_vqs和mtu设置队列vdpa dev add name NAME mgmtdev MGMTDEV [ device_features DEVICE_FEATURES ] [ mac MACADDR ] [ mtu MTU ] [ max_vqp MAX_VQ_PAIRS ]
+
+#vdpa dev add name vdpa0 mgmtdev pci/0000:05:00.3 mac 00:11:22:33:44:55 max_vqp 8
 
 #看下设备是否已经存在
 # /opt/mellanox/iproute2/sbin/vdpa dev show
