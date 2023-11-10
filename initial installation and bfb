@@ -4,6 +4,8 @@
 
 https://www.mellanox.com/downloads/BlueField/RSHIM/rshim-2.0.6-3.ge329c69.el7.centos.x86_64.rpm
 
+###########注意： 最新版的rshim需要DOCA HOST，没有条件安装DOCA HOST，也可以在23.07版本以上的对应OFED的/RPMS目录下找到最新的rshim，23.07里当前版本是2.0.9，推荐BF3用最新的DOCA HOST，或者最新RSHIM ##############
+
 #在主机安装rshim，注意可能有些依赖包需要装
 rpm -ivh rshim-2.0.6-3.ge329c69.el7.centos.x86_64.rpm
 
