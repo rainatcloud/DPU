@@ -2,7 +2,7 @@
 #通过oob接口ipmi直接登录
 #进入arm，
 
-#第一种方式是这条命令 直接从arm进入bmc控制台，通过arm到bmc之间的uart的通道
+#第一种方式是这条命令（目前看只适用于BF2 BMC卡） 直接从arm进入bmc控制台，通过arm到bmc之间的uart的通道 
 ipmitool raw 0x32 0x6a 1 //开启dpu bmc rshim
 
-#第二种方式，关闭主机到卡上的rshim，然后通过192.168.100.1访问bmc？
+#第二种方式，关闭主机到卡上的rshim，然后通过192.168.100.1访问bmc （BF3 BMC卡IP地址如果默认没配，需要通过ipmitool在arm通过命令为其配置静态地址，参见https://docs.nvidia.com/networking/display/bluefieldbmcv2309/connecting+to+bmc+interfaces）
