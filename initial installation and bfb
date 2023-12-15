@@ -57,6 +57,9 @@ ssh 192.168.100.2
 
 #输入账号密码即可在卡里操作
 
+#如果是用了新的bfb进入到卡里之后，执行如下命令升级固件
+/opt/mellanox/mlnx-fw-updater/mlnx_fw_updater.pl
+然后冷启动服务器生效
 
 如果卡里系统卡死了，希望不影响主机的情况下重启卡，执行以下命令：
 echo "SW_RESET 1" > /dev/rshim0/misc
