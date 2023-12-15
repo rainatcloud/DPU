@@ -41,6 +41,10 @@ screen /dev/rshim0/console 115200
 
 
 #cat bfb image文件到rshim0/boot来安装
+#！！！！！注意：BF3在安装新的bfb之前，一定要disable UEFI secureboot，参照下面这个链接，在rshim登录的console界面下，可以disable这个功能，这样才能安装除了ubuntu之外的操作系统bfb
+# https://docs.nvidia.com/networking/display/bluefielddpubspv420/uefi+secure+boot
+
+
 #假如bfb文件为：DOCA_v1.2.0_BlueField_OS_CentOS_8.2-5.4.0-1022.23.g3f6e5a6-bluefield-5.5-1.0.3.2-3.8.0.11969-1-aarch64.bfb 
 cat DOCA_v1.2.0_BlueField_OS_CentOS_8.2-5.4.0-1022.23.g3f6e5a6-bluefield-5.5-1.0.3.2-3.8.0.11969-1-aarch64.bfb > /dev/rshim0/boot
 
