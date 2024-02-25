@@ -1,0 +1,41 @@
+
+#创建桥
+ovs-vsctl add-br br-int -- set bridge br-int datapath_type=netdev
+ovs-vsctl add-br br-vlan -- set bridge br-vlan datapath_type=netdev
+ovs-vsctl add-br br-tun -- set bridge br-tun datapath_type=netdev
+
+# vdpa端口
+ovs-vsctl del-port bond0
+ovs-vsctl del-port vdpa0
+ovs-vsctl del-port vdpa1
+ovs-vsctl del-port vdpa2
+ovs-vsctl del-port vdpa3
+sleep 1
+ovs-vsctl add-port br-vlan bond0 -- set Interface bond0 type=dpdk options:dpdk-devargs=0000:af:00.0
+ovs-vsctl set port bond0 tag=2689
+ovs-vsctl add-port br-int vdpa0 -- set Interface vdpa0 type=dpdkvdpa options:vdpa-socket-path=/tmp/tmp_sock0 options:vdpa-accelerator-devargs=0000:af:00.2
+ovs-vsctl add-port br-int vdpa1 -- set Interface vdpa1 type=dpdkvdpa options:vdpa-socket-path=/tmp/tmp_sock1 options:vdpa-accelerator-devargs=0000:af:00.3
+ovs-vsctl add-port br-int vdpa2 -- set Interface vdpa2 type=dpdkvdpa options:vdpa-socket-path=/tmp/tmp_sock2 options:vdpa-accelerator-devargs=0000:af:01.2
+ovs-vsctl add-port br-int vdpa3 -- set Interface vdpa3 type=dpdkvdpa options:vdpa-socket-path=/tmp/tmp_sock3 options:vdpa-accelerator-devargs=0000:af:01.3
+
+
+#other config配置参数
+  
+ovs-vsctl set o . other:dpdk-extra="-a 0000:af:00.0,representor=[0-126],dv_flow_en=1,dv_esw_en=1,dv_xmeta_en=1"
+ovs-vsctl set o . other:dpdk-init="true"
+ovs-vsctl set o . other:dpdk-lcore-mask="0x8000000000"
+ovs-vsctl set o . other:pmd-cpu-mask="0x8008"
+ovs-vsctl set o . other:global_event_core="27"
+ovs-vsctl set o . other:dpdk-socket-mem="4096,4096"
+ovs-vsctl set o . other:max-idle="30000"
+ovs-vsctl set o . other:netdev-dpdkvdpa-extra="no_traffic_time=0"
+
+#设置handler和revalidator数量为1
+ovs-vsctl --no-wait set o . other:n-handler-threads=1
+ovs-vsctl --no-wait set o . other:n-revalidator-threads=1
+
+#查看ovs进程里的线程
+ps -T -o spid,comm -p $(pidof ovs-vswitchd)
+
+#htop进程详细信息
+htop -p $(pidof ovs-vswitchd)
