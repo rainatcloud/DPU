@@ -34,6 +34,9 @@ ovs-vsctl set o . other:netdev-dpdkvdpa-extra="no_traffic_time=0"
 ovs-vsctl --no-wait set o . other:n-handler-threads=1
 ovs-vsctl --no-wait set o . other:n-revalidator-threads=1
 
+删除other config里面的某项
+ovs-vsctl remove o . other n-revalidator-threads
+
 #查看lcore的使用情况
 ovs-appctl dpdk/lcore-list
 
