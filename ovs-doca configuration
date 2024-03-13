@@ -1,0 +1,47 @@
+
+
+########build ovs-doca#################
+
+#内部git
+git clone ssh://git@gitlab-master.nvidia.com:12051/sdn/ovs.git -b nv-next
+cd ovs
+
+#配置PKG_CONFIG_PATH
+: ${DPDK_RELEASE_DIR:=/opt/mellanox/dpdk}
+: ${DOCA_RELEASE_DIR:=/opt/mellanox/doca}
+ 
+LIBDPDK_PC="$(find "$DPDK_RELEASE_DIR" -name libdpdk.pc | head -1)"
+LIBDOCA_PC="$(find "$DOCA_RELEASE_DIR" -name doca.pc | head -1)"
+PKG_CONFIG_PATH="$(dirname $LIBDPDK_PC):$(dirname $LIBDOCA_PC)"
+
+# Add flexio .pc path as well, due to DOCA deps:
+PKG_CONFIG_PATH="$PKG_CONFIG_PATH:$(find /opt/mellanox/ -name libflexio.pc -exec dirname {} \;)"
+
+#OVS编译
+./boot.sh
+#if you wish to compile only ovs-dpdk, remove "--with-doca"
+./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc CFLAGS="-Werror -Wno-cast-align" \
+            PKG_CONFIG_PATH=$PKG_CONFIG_PATH --with-dpdk --with-doca && \
+make -j && sudo make -j install
+
+#如需打包rpm
+make rpm-fedora RPMBUILD_OPT="--with static --with dpdk --without check --with doca --define 'dpdk_datadir /path/to/dpdk/install' --define 'doca_datadir /path/to/doca/install'"
+#看下rpm的内容
+rpm -qlp rpm/rpmbuild/RPMS/x86_64/openvswitch-2*.x86_64.rpm
+
+#################ovs-doca configuration##########################
+
+[root@localhost ~]# ovs-vsctl set o . other:dpdk-extra="-a 03:00.0"
+[root@localhost ~]# ovs-vsctl set o . other:dpdk-init=true
+[root@localhost ~]# ovs-vsctl set o . other:doca-init=true
+[root@localhost ~]# ovs-vsctl set o . other:dpdk-extra="-a 0000:03:00.0"
+[root@localhost ~]# systemctl restart openvswitch
+[root@localhost ~]# ovs-vsctl get o . doca_initialized
+true
+[root@localhost ~]# ovs-vsctl get o . dpdk_initialized
+true
+[root@localhost ~]#ovs-vsctl --may-exist add-br br-phy -- set Bridge br-phy datapath_type=netdev -- br-set-external-id br-phy bridge-id br-phy -- set bridge br-phy fail-mode=standalone
+
+#####to be checked#########
+[root@localhost ~]# ovs-vsctl add-port br-phy p0 -- set Interface p0 type=dpdk options:dpdk-devargs=0000:03:00.0,dv_xmeta_en=4,dv_flow_en=2
+[root@localhost ~]# ovs-vsctl add-port br-phy pf0hpf -- set Interface pf0hpf type=dpdk options:dpdk-devargs=0000:03:00.0,representor=[255]
