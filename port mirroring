@@ -1,0 +1,41 @@
+
+#vf0 mirror to vxlan
+
+ovs-vsctl \
+     -- --id=@p1 get port vxlan0\
+     -- --id=@p2 get port pf0vf0\
+     -- --id=@m create mirror name=m0 select-src-port=@p2 output-port=@p1 \
+     -- set bridge ovs_dpdk_br0 mirrors=@m
+
+[root@l-csi-ar-1027d ~]# ovs-vsctl show
+b713dfb3-adc0-4ce9-84e8-55ea6b1fcb1f
+  Bridge br-phy
+    datapath_type: netdev
+    Port p0
+      Interface p0
+        type: dpdk
+        options: {dpdk-devargs="0000:81:00.0"}
+    Port br-phy
+      Interface br-phy
+        type: internal
+  Bridge ovs_dpdk_br0
+    fail_mode: standalone
+    datapath_type: netdev
+    Port pf0vf1
+      Interface pf0vf1
+        type: dpdk
+        options: {dpdk-devargs="0000:81:00.0,representor=[1],dv_flow_en=1,dv_esw_en=1,dv_xmeta_en=1"}
+    Port vxlan0
+      Interface vxlan0
+        type: vxlan
+        options: {dst_port="4789", key="1", local_ip="11.11.11.2", remote_ip="11.11.11.1"}
+    Port pf0vf0
+      Interface pf0vf0
+        type: dpdk
+        options: {dpdk-devargs="0000:81:00.0,representor=[0],dv_flow_en=1,dv_esw_en=1,dv_xmeta_en=1"}
+    Port ovs_dpdk_br0
+      Interface ovs_dpdk_br0
+        type: internal
+  ovs_version: "2.15.1-d246dab"
+[root@l-csi-ar-1027d ~]# ovs-vsctl get o . other-config
+{dpdk-extra="-a 0000:81:00.0,representor=pf0vf[0,65535],dv_flow_en=1,dv_esw_en=1,dv_xmeta_en=1", dpdk-init="true", hw-offload="true", pmd-cpu-list="58-63"}
